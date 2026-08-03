@@ -16,3 +16,15 @@ Project is currently under development.
 - Authentication: Spring Security + JWT
 - Charts: Recharts
 - Version Control: Git & GitHub
+
+ThinkStack never recommends a product without explaining WHY.
+
+Every recommendation must be:
+
+✔ Personalized
+
+✔ Transparent
+
+✔ Explainable
+
+✔ Actionable
