@@ -1,66 +1,94 @@
 # ThinkStack Database Schema
 
-## 1. Users
+## Database Overview
 
-## 2. User Preferences
+ThinkStack uses PostgreSQL as its primary relational database.
 
-## 3. Categories
+The database is designed to support:
 
-## 4. Products
+- User authentication
+- User preferences
+- Decision sessions
+- ThinkStack Wizard
+- Products and categories
+- Product specifications
+- Comparisons
+- Recommendations
+- Reviews
+- Price comparison
+- Decision Journal
+- Decision DNA
+- Notifications
+- Bookmarks
 
-## 5. Product Specifications
+---
 
-## 6. Wizard Questions
+# 1. users
 
-## 7. Wizard Answers
+## Purpose
 
-## 8. Decision Sessions
+The `users` table stores account and authentication information for every ThinkStack user.
 
-## 9. Recommendations
+## Columns
 
-## 10. Product Prices
+| Column | Data Type | Constraints | Description |
+|---|---|---|---|
+| id | BIGSERIAL | PRIMARY KEY | Unique identifier for the user |
+| name | VARCHAR(100) | NOT NULL | User's name |
+| email | VARCHAR(255) | NOT NULL, UNIQUE | User's login email |
+| password_hash | VARCHAR(255) | NOT NULL | BCrypt hashed password |
+| role | VARCHAR(30) | NOT NULL | User role |
+| is_active | BOOLEAN | NOT NULL | Whether the account is active |
+| created_at | TIMESTAMP | NOT NULL | Account creation time |
+| updated_at | TIMESTAMP | NOT NULL | Last update time |
 
-## 11. Product Reviews
+## Roles
 
-## 12. Decision Journal
+The `role` column can contain:
 
-## 13. Decision DNA
+- USER
+- ADMIN
+- SUPER_ADMIN
 
-## 14. Notifications
+## Relationships
 
-## 15. Bookmarks
+A user can have:
 
-## 16. Product Media
+- Multiple decisions
+- Multiple preferences
+- Multiple bookmarks
+- Multiple notifications
+- Multiple journal entries
+- One Decision DNA profile
 
-## 17. Price History
+## Security
 
-## 18. Admin
+Passwords must never be stored as plain text.
 
-                    USER
-                     │
-                     │
-          ┌──────────┴─────────┐
-          │                    │
-          │                    │
-     Decision Session     User Profile
-          │
-          │
-     Wizard Answers
-          │
-          │
-    Recommendation Engine
-          │
-          │
-      Recommended Products
-          │
-          │
-     Product Details
-          │
-     ┌────┼────────┐
-     │    │        │
- Specs Prices Reviews
-     │    │        │
-     └────┴────────┘
-          │
-          │
-    Decision Journal
+ThinkStack will store passwords using BCrypt hashing.
+
+---
+
+# Future Tables
+
+The following tables will be designed next:
+
+1. user_preferences
+2. categories
+3. products
+4. product_specifications
+5. wizard_questions
+6. wizard_answers
+7. decision_sessions
+8. decision_alternatives
+9. recommendations
+10. product_prices
+11. product_reviews
+12. product_media
+13. price_history
+14. bookmarks
+15. decision_journal
+16. decision_dna
+17. notifications
+18. Bookmarks
+
