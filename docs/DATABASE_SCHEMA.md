@@ -231,23 +231,83 @@ Examples of future categories include:
 - Courses
 - Services
 
+# 4. products
+
+## Purpose
+
+The `products` table stores the core information about products and decision alternatives available on ThinkStack.
+
+Products are linked to categories so that the same product architecture can support different decision domains in the future.
+
+## Columns
+
+| Column | Data Type | Constraints | Description |
+|---|---|---|---|
+| id | BIGSERIAL | PRIMARY KEY | Unique identifier for the product |
+| category_id | BIGINT | NOT NULL, FOREIGN KEY | Category to which the product belongs |
+| brand | VARCHAR(100) | NOT NULL | Product brand |
+| name | VARCHAR(255) | NOT NULL | Product name |
+| model_number | VARCHAR(150) | NULL | Product model or variant identifier |
+| slug | VARCHAR(300) | NOT NULL, UNIQUE | URL-friendly product identifier |
+| description | TEXT | NULL | Detailed product description |
+| short_description | VARCHAR(500) | NULL | Short product summary |
+| product_type | VARCHAR(100) | NULL | Type or sub-type of the product |
+| release_date | DATE | NULL | Product release date |
+| is_active | BOOLEAN | NOT NULL | Whether the product is currently available |
+| created_at | TIMESTAMP | NOT NULL | Product creation time |
+| updated_at | TIMESTAMP | NOT NULL | Last product update time |
+
+## Relationships
+
+Each product belongs to one category.
+
+One category can contain multiple products.
+
+Relationship:
+
+categories (1) -------- (many) products
+
+The `category_id` column references:
+
+categories.id
+
+## Product Identity
+
+The combination of brand, name, and model number helps identify a specific product or variant.
+
+The `slug` provides a unique URL-friendly identifier.
+
+Example:
+
+```text
+brand:
+Apple
+
+name:
+MacBook Air M4
+
+model_number:
+MW123HN/A
+
+slug:
+apple-macbook-air-m4
+
 # Future Tables
 
 The following tables will be designed next:
 
-1. products
-2. product_specifications
-3. wizard_questions
-4. wizard_answers
-5. decision_sessions
-6. decision_alternatives
-7. recommendations
-8. product_prices
-9. product_reviews
-10. product_media
-11. price_history
-12. bookmarks
-13. decision_journal
-14. decision_dna
-15. notifications
+1. product_specifications
+2. wizard_questions
+3. wizard_answers
+4. decision_sessions
+5. decision_alternatives
+6. recommendations
+7. product_prices
+8. product_reviews
+9. product_media
+10. price_history
+11. bookmarks
+12. decision_journal
+13. decision_dna
+14. notifications
 
