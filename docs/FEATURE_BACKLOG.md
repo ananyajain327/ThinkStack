@@ -14,13 +14,13 @@ Status: `done` · `in progress` · `todo` · `deferred`
 | Seed data | done | 6 categories, 24 spec defs, 10 products, 120 product-specs, 20 prices, 32 price-history, 22 reviews, 2 wizards, 21 questions |
 | Backend compile + boot + test | done | `mvn test` green |
 
-## Authentication (P0) — `in progress`
+## Authentication (P0) — `done`
 | Feature | Status | Notes |
 | --- | --- | --- |
-| JWT auth (register/login/refresh) | todo | |
-| User roles (USER/PREMIUM/ADMIN) + BCrypt | todo | |
-| JWT filter + SecurityConfig wiring | todo | |
-| `/api/v1/auth/*` endpoints | todo | |
+| JWT auth (register/login/refresh) | done | Access+refresh tokens, HS256, env-driven secret/expiry |
+| User roles (USER/PREMIUM/ADMIN) + BCrypt | done | Roles stored on user; ADMIN-gated routes scaffolded |
+| JWT filter + SecurityConfig wiring | done | Stateless chain, 401 entry point |
+| `/api/v1/auth/*` endpoints | done | register, login, refresh, me |
 
 ## Catalog & Pricing (P1) — `todo`
 - Product browse/filter/sort endpoints

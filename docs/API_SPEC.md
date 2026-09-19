@@ -13,10 +13,16 @@
 | --- | --- | --- | --- |
 | GET | `/api/v1/health` | none | Liveness + API version. `200` when up. |
 
-## Planned surfaces (skeleton)
-| Area | Base path | Notes |
-| --- | --- | --- |
-| Auth | `/api/v1/auth` | register, login, me |
+## Auth (implemented)
+All auth responses use the standard envelope with `data` = `{ userId, username, email, role, accessToken, refreshToken, issuedAt }`.
+Access tokens expire per `**JWT**` TTL (default 24h); refresh tokens 7d. Send the access token as `Authorization: Bearer <token>`.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/auth/register` | none | `{ username, email, password, displayName? }` → 201; `EMAIL_TAKEN`/`USERNAME_TAKEN` → 400 |
+| POST | `/api/v1/auth/login` | none | `{ usernameOrEmail, password }` → 200; wrong credentials → 401 `INVALID_CREDENTIALS` |
+| POST | `/api/v1/auth/refresh` | none | `{ refreshToken }` → 200 with new token pair; invalid/expired → 400 `INVALID_REFRESH_TOKEN` |
+| GET | `/api/v1/auth/me` | token | Current user's profile + fresh tokens |
 | Categories | `/api/v1/categories` | list w/ spec defs, by slug |
 | Products | `/api/v1/products` | list, get, by category |
 | Specifications | `/api/v1/products/{id}/specifications` | values w/ explanations |

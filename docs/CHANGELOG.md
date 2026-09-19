@@ -5,6 +5,14 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Authentication (Phase 2 milestone)**:
+  - JWT access + refresh tokens (jjwt 0.12.6, HS256, secret/expiry from env)
+  - BCrypt password hashing, `AuthService` + `AuthController`
+  - Register (duplicate email/username → 400), login by email or username,
+    token refresh, `/auth/me`
+  - JWT filter + stateless security chain (401 for protected endpoints without a valid token)
+  - `ThinkStackUserDetails` principal + `SecurityUtils` current-user helpers
+  - Auth 401 mapping for bad credentials in GlobalExceptionHandler (was 500)
 - Repo+tooling baseline: root README, root+backend `.gitignore`, `.env.example`,
   `docker-compose.yml`, Maven wrapper (mvn 3.9.16), docs skeleton (schema, API spec placeholder, roadmap, feature backlog, TODO tracker, changelog).
 - Backend infrastructure: Spring Boot 3.3.5 app, `application.yml` + dev/prod profiles,

@@ -46,9 +46,9 @@ spring:
 
 thinkstack:
   jwt:
-    # Use a long random secret in production via the JWT_SECRET environment variable.
-    secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-characters}
+    secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-characters-long-enough-for-hs256}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 
 logging:
   level:
