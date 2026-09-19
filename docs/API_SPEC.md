@@ -23,12 +23,34 @@ Access tokens expire per `**JWT**` TTL (default 24h); refresh tokens 7d. Send th
 | POST | `/api/v1/auth/login` | none | `{ usernameOrEmail, password }` → 200; wrong credentials → 401 `INVALID_CREDENTIALS` |
 | POST | `/api/v1/auth/refresh` | none | `{ refreshToken }` → 200 with new token pair; invalid/expired → 400 `INVALID_REFRESH_TOKEN` |
 | GET | `/api/v1/auth/me` | token | Current user's profile + fresh tokens |
-| Categories | `/api/v1/categories` | list w/ spec defs, by slug |
-| Products | `/api/v1/products` | list, get, by category |
-| Specifications | `/api/v1/products/{id}/specifications` | values w/ explanations |
-| Prices | `/api/v1/products/{id}/prices` | by seller, current + history |
-| Reviews | `/api/v1/products/{id}/reviews` | CRUD |
-| Wizard | `/api/v1/wizards` | list, get w/ questions |
+
+## Catalog — Categories (implemented)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/categories` | none | Active categories with spec definitions + product counts |
+| GET | `/api/v1/categories/{slug}` | none | One category with spec definitions |
+
+## Catalog — Products (implemented)
+All product endpoints accept the standard envelope; `data` is the list/detail.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/products` | none | List active products. Query: `category` (slug), `minPrice`, `maxPrice`, `sortBy` (rating\|price\|name\|reviewCount), `sortDir`, `page`, `size` |
+| GET | `/api/v1/products/{slug}` | none | Full detail: summary + specifications + sellers + reviews |
+| GET | `/api/v1/products/{slug}/specifications` | none | Spec values merged with definition metadata (`displayValue` rendered) |
+| GET | `/api/v1/products/{slug}/prices` | none | Sellers sorted by price ascending |
+| GET | `/api/v1/products/{slug}/price-history` | none | Price samples sorted by `recordedAt` (for charts) |
+| GET | `/api/v1/products/{slug}/reviews` | none | Reviews (USER/EXPERT/EDITORIAL) with source transparency |
+
+## Wizards (implemented)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/wizards` | none | All wizards with their ordered questions |
+| GET | `/api/v1/wizards/by-category/{categorySlug}` | none | The active wizard for a category (e.g. `laptops`) |
+
+Wizard question `options`/`visible_if` are returned as raw JSON strings. `sortBy=rating`/`sortBy=reviewCount` sort descending by default.
+
+## Planned surfaces (skeleton)
 | Decisions | `/api/v1/decisions/{sessionId}` | sessions, answers, alternatives |
 | Recommendations | `/api/v1/decisions/{sessionId}/recommendations` | ranked + why |
 | User | `/api/v1/users/me` | profile, preferences, DNA, journal, bookmarks, notifications |

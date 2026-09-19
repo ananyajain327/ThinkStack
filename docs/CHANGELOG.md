@@ -5,6 +5,14 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Catalog + Wizard APIs (Phase 2)**:
+  - Read endpoints: categories (with spec definitions + product counts),
+    products (list with category/price filtering + sorting, detail by slug),
+    specifications (values merged with definitions, rendered `displayValue`),
+    prices by seller, price history, reviews
+  - Wizard endpoints: all wizards with ordered questions, wizard by category slug
+  - Response DTOs as Java records; `bestPrice` from cheapest in-stock seller
+  - Public accessibility for catalog endpoints in the security chain
 - **Authentication (Phase 2 milestone)**:
   - JWT access + refresh tokens (jjwt 0.12.6, HS256, secret/expiry from env)
   - BCrypt password hashing, `AuthService` + `AuthController`
