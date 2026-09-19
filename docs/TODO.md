@@ -1,81 +1,37 @@
-# 🚀 ThinkStack Development Tracker
+# ThinkStack — Development Tracker
 
-## Phase 1 - Planning
+> Status legend: `[x] done` · `[~] in progress` · `[ ] not started`
 
-- [x] Project Idea
-- [x] GitHub Repository
-- [x] Project Structure
-- [x] README
-- [x] Product Vision
-- [ ] Complete Project Scope
-- [ ] Database Design
-- [ ] API Design
-- [ ] UI Wireframes
+Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEATURE_BACKLOG.md), [API_SPEC](API_SPEC.md), [DATABASE_SCHEMA](DATABASE_SCHEMA.md).
 
----
+## Current Milestone — Phase 1 Backend (in progress)
+- [x] **Repository consolidation** (backend removed from home, moved to repo root, `.gitignore` fixed)
+- [x] **Maven + build** — backend compiles, `mvn test` green
+- [x] **Database schema** — Flyway V1–V6 applied to Postgres, JPA validates, app boots
+- [x] **Seed data** — categories (6), spec defs (24), products (10), product specs (120), prices (20), price history (32), reviews (22), wizards (2), wizard questions (21), all verified in DB
+- [ ] ~Auth (P0~P1) — register, login, JWT, roles, user/current-profile~
+- [ ] API baseline — products, categories, specs, prices, reviews, wizard, decisions
+- [ ] Explainability payloads (why/why-not)
+- [ ] Price history + price alerts + notifications
+- [ ] Bookmarks, journal, decision DNA
+- [ ] Backend service/controller layer completeness
 
-## Phase 2 - Backend
+## Phase 2 Frontend  (`[ ]` not started)
+- [ ] Next.js scaffold (App Router, TypeScript, Tailwind)
+- [ ] Landing + pricing page
+- [ ] Auth screens (login/signup)
+- [ ] Wizard UI (dynamic, adaptive)
+- [ ] Results + explainability UI
+- [ ] Product detail / comparison / prices / reviews
+- [ ] Dashboard, journal, bookmarks, preferences
 
-- [ ] Create Spring Boot Project
-- [ ] Configure PostgreSQL
-- [ ] JWT Authentication
-- [ ] User Module
-- [ ] Decision Module
-- [ ] Wizard Module
-- [ ] Recommendation Engine
-- [ ] Shopping Module
+## Phase 3 Polish
+- [ ] PrismDD tests (decision validity), linting on CI
+- [ ] Price charts (Recharts)
+- [ ] Notifications (price-drop)
+- [ ] AI summarization (only where it adds trust, never fabricates)
+- [ ] Deployment prep (containerized backend, Nginx/Next SSG, env secrets)
 
----
-
-## Phase 3 - Frontend
-
-- [ ] React Setup
-- [ ] Tailwind Setup
-- [ ] Landing Page
-- [ ] Login Page
-- [ ] Signup Page
-- [ ] Dashboard
-- [ ] ThinkStack Wizard
-- [ ] Product Comparison
-- [ ] Recommendation Page
-- [ ] Profile Page
-
----
-
-## Phase 4 - Advanced Features
-
-- [ ] Decision DNA
-- [ ] Decision Journal
-- [ ] Charts
-- [ ] Price Comparison
-- [ ] Product Details
-- [ ] Best Alternatives
-- [ ] Hidden Cost Calculator
-- [ ] Future Proof Score
-
----
-
-## Phase 5 - AI
-
-- [ ] AI Recommendations
-- [ ] AI Explanation
-- [ ] AI Product Advisor
-
----
-
-## Phase 6 - Deployment
-
-- [ ] Docker
-- [ ] Backend Deployment
-- [ ] Frontend Deployment
-- [ ] Database Deployment
-
----
-
-## Phase 7 - Documentation
-
-- [ ] Screenshots
-- [ ] Architecture Diagram
-- [ ] ER Diagram
-- [ ] API Documentation
-- [ ] Demo Video
+## Done (Phase 0 & foundation)
+- [x] DB schema + seed baseline (Flyway V1–V6), entities, repositories
+- [x] Docs baseline (README, ROADMAP, TODO tracker, schema doc, API stub)

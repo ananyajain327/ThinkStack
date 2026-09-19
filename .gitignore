@@ -1,23 +1,39 @@
-# IntelliJ
+# IntelliJ / IDE
 .idea/
 *.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
 
-# Java
+# Java / Maven
 target/
 *.class
+.mvn/wrapper/maven-wrapper.jar
 
-# Node
+# Node / Next.js
 node_modules/
+.next/
+out/
+dist/
 
-# Environment
+# Environment & secrets
 .env
+.env.*
+!.env.example
+
+# Database
+*.sqlite3
+postgres_data/
 
 # Logs
 *.log
+npm-debug.log*
 
-# VS Code
-.vscode/
-
-# OS Files
+# OS
 .DS_Store
 Thumbs.db
+
+# Test / coverage
+coverage/
+.nyc_output/
