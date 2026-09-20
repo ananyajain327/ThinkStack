@@ -9,9 +9,11 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] **Maven + build** — backend compiles, `mvn test` green
 - [x] **Database schema** — Flyway V1–V6 applied to Postgres, JPA validates, app boots
 - [x] **Seed data** — categories (6), spec defs (24), products (10), product specs (120), prices (20), price history (32), reviews (22), wizards (2), wizard questions (21), all verified in DB
-- [ ] ~Auth (P0~P1) — register, login, JWT, roles, user/current-profile~
-- [ ] API baseline — products, categories, specs, prices, reviews, wizard, decisions
-- [ ] Explainability payloads (why/why-not)
+- [x] **Auth (P0–P1)** — register, login, JWT, roles, user/current-profile
+- [x] **API baseline — catalog** — products, categories, specs, prices, reviews, wizard
+- [x] **Decision engine** — sessions, adaptive answers, ranked recommendations + explainability, alternatives shortlist
+- [ ] Comparison endpoints (side-by-side in a session)
+- [ ] Explainability payloads iteration (per-dimension notes per product)
 - [ ] Price history + price alerts + notifications
 - [ ] Bookmarks, journal, decision DNA
 - [ ] Backend service/controller layer completeness

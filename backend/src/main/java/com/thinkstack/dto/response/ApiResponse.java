@@ -33,6 +33,10 @@ public class ApiResponse<T> {
         return of(true, message, data, null);
     }
 
+    public static <T> ApiResponse<T> created(T data) {
+        return of(true, "Created", data, null);
+    }
+
     public static <T> ApiResponse<T> error(String message) {
         return of(false, "Error", null, message);
     }

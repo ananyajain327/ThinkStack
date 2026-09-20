@@ -50,9 +50,27 @@ All product endpoints accept the standard envelope; `data` is the list/detail.
 
 Wizard question `options`/`visible_if` are returned as raw JSON strings. `sortBy=rating`/`sortBy=reviewCount` sort descending by default.
 
+## Decisions & Recommendations (implemented, auth required)
+Decision sessions are private to the authenticated user. Session + recommendation JSON in `data`.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/decisions` | token | Start a session. Body: `{ wizardId? \| categorySlug?, title? }` -> 201 |
+| GET | `/api/v1/decisions/mine` | token | Current user's sessions, newest first |
+| GET | `/api/v1/decisions/{sessionId}` | token | One session with its recorded answers |
+| POST | `/api/v1/decisions/{sessionId}/answers` | token | Upsert answers: `[{ questionKey, answerValue }]`; recomputes budget + priority weights |
+| POST | `/api/v1/decisions/{sessionId}/recommendations` | token | (Re)compute + persist ranked recommendations |
+| GET | `/api/v1/decisions/{sessionId}/recommendations` | token | Persisted recommendations, rank order |
+| POST | `/api/v1/decisions/{sessionId}/alternatives/{productId}` | token | Add to shortlist |
+| DELETE | `/api/v1/decisions/{sessionId}/alternatives/{productId}` | token | Remove from shortlist |
+
+Answer `questionKey` values must belong to the session's wizard; unknown keys -> 400. Cross-user access -> 400 `FORBIDDEN`.
+
+Recommendation `data` per product: `{ id, rankPosition, product: ProductSummary, overallScore, confidenceRating, budgetCategory, valueScore, featureMatch, performanceMatch, reviewSentiment, scoreBreakdown, explainability, advantages[], disadvantages[], dealBreakers[], tradeOffs[] }`.
+`budgetCategory`: `WITHIN_BUDGET` / `SLIGHTLY_ABOVE_BUDGET` / `PREMIUM_ALTERNATIVE` / `EXCEPTIONAL_VALUE` / `NOT_SUITABLE`.
+Scoring: weighted (feature 40 / value 25 / sentiment 20 / performance 15) using wizard question weights shifted by the user's importance answers; dimension scores are computed from live product specs (RAM/CPU, battery hours, weight, resolution, GPU).
+
 ## Planned surfaces (skeleton)
-| Decisions | `/api/v1/decisions/{sessionId}` | sessions, answers, alternatives |
-| Recommendations | `/api/v1/decisions/{sessionId}/recommendations` | ranked + why |
 | User | `/api/v1/users/me` | profile, preferences, DNA, journal, bookmarks, notifications |
 
 ## Errors

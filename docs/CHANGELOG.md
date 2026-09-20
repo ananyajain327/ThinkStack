@@ -5,6 +5,16 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Decision Engine (Phase 3)**:
+  - Authenticated decision sessions: start (by wizard or category), list, get
+  - Adaptive wizard answers: per-question upsert, requirement profile + priority weights persisted
+  - Ranked recommendations with explainability: `overallScore`, `confidenceRating`,
+    `budgetCategory`, `valueScore`, `featureMatch`, `performanceMatch`, `reviewSentiment`,
+    score breakdown, advantages/disadvantages/dealBreakers/tradeOffs
+  - Scoring engine: weighted (feature/value/sentiment/performance) from wizard question
+    weights shifted by user importance answers; dimension scores computed from live specs
+  - Shortlist endpoints: add/remove decision alternatives
+  - Ownership enforcement: sessions are private to the authenticated user (cross-user → FORBIDDEN)
 - **Catalog + Wizard APIs (Phase 2)**:
   - Read endpoints: categories (with spec definitions + product counts),
     products (list with category/price filtering + sorting, detail by slug),
