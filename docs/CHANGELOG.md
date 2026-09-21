@@ -5,6 +5,12 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Comparison endpoints (Phase 3b)**:
+  - Side-by-side comparison of a session's ranked recommendations (`/compare`)
+    or shortlist (`/compare/alternatives`)
+  - Union of category spec rows (ordered by display order) with rendered
+    `displayValue` per product column; sellers included per column
+  - Falls back to the shortlist when no recommendations have been generated yet
 - **Decision Engine (Phase 3)**:
   - Authenticated decision sessions: start (by wizard or category), list, get
   - Adaptive wizard answers: per-question upsert, requirement profile + priority weights persisted

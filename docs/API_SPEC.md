@@ -63,8 +63,12 @@ Decision sessions are private to the authenticated user. Session + recommendatio
 | GET | `/api/v1/decisions/{sessionId}/recommendations` | token | Persisted recommendations, rank order |
 | POST | `/api/v1/decisions/{sessionId}/alternatives/{productId}` | token | Add to shortlist |
 | DELETE | `/api/v1/decisions/{sessionId}/alternatives/{productId}` | token | Remove from shortlist |
+| GET | `/api/v1/decisions/{sessionId}/compare` | token | Side-by-side of ranked recommendations |
+| GET | `/api/v1/decisions/{sessionId}/compare/alternatives` | token | Side-by-side of the session shortlist |
 
 Answer `questionKey` values must belong to the session's wizard; unknown keys -> 400. Cross-user access -> 400 `FORBIDDEN`.
+
+Comparison `data`: `{ sessionId, categorySlug, categoryName, generatedAt, items[], specRows[] }`. `item` = `{ productId, product: ProductSummary, rank?, overallScore?, budgetCategory?, sellers[] }`. `specRow` = `{ specKey, specName, dataType, unit, cells[] }` with one `cell` (rendered `displayValue` + raw text/numeric/boolean) per column.
 
 Recommendation `data` per product: `{ id, rankPosition, product: ProductSummary, overallScore, confidenceRating, budgetCategory, valueScore, featureMatch, performanceMatch, reviewSentiment, scoreBreakdown, explainability, advantages[], disadvantages[], dealBreakers[], tradeOffs[] }`.
 `budgetCategory`: `WITHIN_BUDGET` / `SLIGHTLY_ABOVE_BUDGET` / `PREMIUM_ALTERNATIVE` / `EXCEPTIONAL_VALUE` / `NOT_SUITABLE`.

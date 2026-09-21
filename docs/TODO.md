@@ -12,7 +12,7 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] **Auth (P0–P1)** — register, login, JWT, roles, user/current-profile
 - [x] **API baseline — catalog** — products, categories, specs, prices, reviews, wizard
 - [x] **Decision engine** — sessions, adaptive answers, ranked recommendations + explainability, alternatives shortlist
-- [ ] Comparison endpoints (side-by-side in a session)
+- [x] **Comparison endpoints** — side-by-side specs/prices for recommendations or shortlist
 - [ ] Explainability payloads iteration (per-dimension notes per product)
 - [ ] Price history + price alerts + notifications
 - [ ] Bookmarks, journal, decision DNA

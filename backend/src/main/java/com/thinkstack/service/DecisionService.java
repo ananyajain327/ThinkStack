@@ -4,7 +4,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkstack.dto.request.AnswerSubmissionRequest;
 import com.thinkstack.dto.request.StartSessionRequest;
+import com.thinkstack.dto.response.ComparisonCell;
+import com.thinkstack.dto.response.ComparisonItem;
+import com.thinkstack.dto.response.ComparisonResponse;
+import com.thinkstack.dto.response.ComparisonSpecRow;
 import com.thinkstack.dto.response.DecisionSessionResponse;
+import com.thinkstack.dto.response.PriceResponse;
 import com.thinkstack.dto.response.ProductSummaryResponse;
 import com.thinkstack.dto.response.RecommendationResponse;
 import com.thinkstack.entity.Category;
@@ -15,6 +20,7 @@ import com.thinkstack.entity.Product;
 import com.thinkstack.entity.ProductPrice;
 import com.thinkstack.entity.ProductSpecification;
 import com.thinkstack.entity.Recommendation;
+import com.thinkstack.entity.SpecificationDefinition;
 import com.thinkstack.entity.User;
 import com.thinkstack.entity.WizardAnswer;
 import com.thinkstack.entity.WizardQuestion;
@@ -26,6 +32,7 @@ import com.thinkstack.repository.ProductPriceRepository;
 import com.thinkstack.repository.ProductRepository;
 import com.thinkstack.repository.ProductSpecificationRepository;
 import com.thinkstack.repository.RecommendationRepository;
+import com.thinkstack.repository.SpecificationDefinitionRepository;
 import com.thinkstack.repository.WizardAnswerRepository;
 import com.thinkstack.repository.WizardQuestionRepository;
 import com.thinkstack.security.SecurityUtils;
@@ -60,6 +67,7 @@ public class DecisionService {
     private final ProductPriceRepository priceRepository;
     private final RecommendationRepository recommendationRepository;
     private final DecisionAlternativeRepository alternativeRepository;
+    private final SpecificationDefinitionRepository specDefinitionRepository;
     private final ObjectMapper objectMapper;
 
     public DecisionService(DecisionSessionRepository sessionRepository,
@@ -71,6 +79,7 @@ public class DecisionService {
                            ProductPriceRepository priceRepository,
                            RecommendationRepository recommendationRepository,
                            DecisionAlternativeRepository alternativeRepository,
+                           SpecificationDefinitionRepository specDefinitionRepository,
                            ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.wizardRepository = wizardRepository;
@@ -81,6 +90,7 @@ public class DecisionService {
         this.priceRepository = priceRepository;
         this.recommendationRepository = recommendationRepository;
         this.alternativeRepository = alternativeRepository;
+        this.specDefinitionRepository = specDefinitionRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -219,6 +229,112 @@ public class DecisionService {
         requireOwned(sessionId);
         return recommendationRepository.findBySessionIdOrderByRankPositionAsc(sessionId)
                 .stream().map(this::toRecResponse).toList();
+    }
+
+    // ---------- side-by-side comparison ----------
+
+    @Transactional(readOnly = true)
+    public ComparisonResponse compareSession(UUID sessionId, boolean onlyAlternatives) {
+        DecisionSession session = requireOwned(sessionId);
+
+        List<Recommendation> recommendations = onlyAlternatives
+                ? java.util.Collections.emptyList()
+                : recommendationRepository.findBySessionIdOrderByRankPositionAsc(sessionId);
+        List<DecisionAlternative> alternatives = alternativeRepository.findBySessionId(sessionId);
+
+        // columns: alternatives when requested/needed, otherwise ranked recommendations,
+        // falling back to alternatives when no recommendations have been generated yet.
+        Map<UUID, Recommendation> recByProduct = new java.util.HashMap<>();
+        List<Product> products = new java.util.ArrayList<>();
+        if (!recommendations.isEmpty()) {
+            for (Recommendation r : recommendations) {
+                products.add(r.getProduct());
+                recByProduct.put(r.getProduct().getId(), r);
+            }
+        } else {
+            for (DecisionAlternative a : alternatives) {
+                products.add(a.getProduct());
+            }
+        }
+        if (products.isEmpty()) {
+            return emptyComparison(session);
+        }
+
+        List<ComparisonItem> items = new java.util.ArrayList<>();
+        for (Product product : products) {
+            Recommendation rec = recByProduct.get(product.getId());
+            items.add(new ComparisonItem(
+                    product.getId(), toSummary(product),
+                    rec == null ? null : rec.getRankPosition(),
+                    rec == null ? null : rec.getOverallScore(),
+                    rec == null ? null : rec.getBudgetCategory(),
+                    priceRepository.findByProductIdOrderByPriceAsc(product.getId()).stream()
+                            .map(this::toPrice).toList()));
+        }
+
+        // rows: union of spec defs for the category, ordered by display order
+        Map<String, Map<UUID, ProductSpecification>> specsByKey = new java.util.LinkedHashMap<>();
+        for (Product product : products) {
+            for (ProductSpecification s : productSpecRepository.findByProductId(product.getId())) {
+                specsByKey.computeIfAbsent(s.getSpecDef().getKeyName(), k -> new java.util.HashMap<>())
+                        .put(product.getId(), s);
+            }
+        }
+        List<ComparisonSpecRow> rows = new java.util.ArrayList<>();
+        List<SpecificationDefinition> defs =
+                specDefinitionRepository.findByCategoryIdOrderByDisplayOrderAsc(session.getCategory().getId());
+        for (SpecificationDefinition def : defs) {
+            if (!specsByKey.containsKey(def.getKeyName())) continue;
+            Map<UUID, ProductSpecification> cellMap = specsByKey.get(def.getKeyName());
+            List<ComparisonCell> cells = products.stream().map(p -> {
+                ProductSpecification s = cellMap.get(p.getId());
+                if (s == null) {
+                    return new ComparisonCell(p.getId(), null, null, null, null);
+                }
+                String display = displayValue(s, def);
+                return new ComparisonCell(p.getId(), display, s.getTextValue(),
+                        s.getNumericValue(), s.getBooleanValue());
+            }).toList();
+            rows.add(new ComparisonSpecRow(def.getKeyName(), def.getName(),
+                    def.getDataType(), def.getUnit(), cells));
+        }
+
+        return new ComparisonResponse(sessionId, session.getCategory().getSlug(),
+                session.getCategory().getName(), java.time.Instant.now(), items, rows);
+    }
+
+    private ComparisonResponse emptyComparison(DecisionSession session) {
+        return new ComparisonResponse(session.getId(), session.getCategory().getSlug(),
+                session.getCategory().getName(), java.time.Instant.now(),
+                java.util.Collections.emptyList(), java.util.Collections.emptyList());
+    }
+
+    private String displayValue(ProductSpecification spec, SpecificationDefinition def) {
+        return switch (def.getDataType()) {
+            case "NUMERIC" -> spec.getNumericValue() == null ? null
+                    : spec.getNumericValue().stripTrailingZeros().toPlainString()
+                    + (def.getUnit() != null ? " " + def.getUnit() : "");
+            case "BOOLEAN" -> spec.getBooleanValue() == null ? null
+                    : (spec.getBooleanValue() ? "Yes" : "No");
+            default -> spec.getTextValue();
+        };
+    }
+
+    private ProductSummaryResponse toSummary(Product product) {
+        return new ProductSummaryResponse(
+                product.getId(), product.getName(), product.getSlug(), product.getBrand(),
+                product.getModel(), product.getCategory().getSlug(),
+                product.getCategory().getName(), product.getImageUrl(), product.getBasePrice(),
+                bestPrice(product), product.getCurrency(), product.getAvgRating(),
+                product.getReviewCount() == null ? 0 : product.getReviewCount());
+    }
+
+    private PriceResponse toPrice(ProductPrice price) {
+        return new PriceResponse(
+                price.getId(), price.getSellerName(), price.getSellerUrl(), price.getPrice(),
+                price.getOriginalPrice(), price.getCurrency(), price.getInStock(),
+                price.getShippingCost(), price.getAvailability(), price.getSellerRating(),
+                price.getDeliveryInfo(), price.getLastCheckedAt());
     }
 
     // ---------- alternatives shortlist ----------

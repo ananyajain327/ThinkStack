@@ -28,11 +28,11 @@ Status: `done` · `in progress` · `todo` · `deferred`
 - Price endpoint (current + by-seller) + price-history endpoint
 - Reviews CRUD with transparency fields
 
-## Decision Engine (P1) — `in progress`
-- Wizard: GET questions, POST answers → recommendation input — `done`
-- Recommendation engine + explainability (why-this / why-not) — `done`
-- Budget Guard + category logic + comparison endpoints — comparison endpoints `todo`
-- Decision session + DNA + journal persistence — sessions `done`; DNA/journal `todo`
+## Decision Engine (P1) — `done`
+- Wizard: GET questions, POST answers → recommendation input
+- Recommendation engine + explainability (why-this / why-not)
+- Budget Guard + category logic + comparison endpoints
+- Decision session + DNA + journal persistence — sessions done; DNA/journal `todo`
 
 ## Personalization (P2) — `todo`
 - Dashboard feed, bookmarks, notifications/price-alerts

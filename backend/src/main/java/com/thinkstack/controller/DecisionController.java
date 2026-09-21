@@ -3,6 +3,7 @@ package com.thinkstack.controller;
 import com.thinkstack.dto.request.AnswerSubmissionRequest;
 import com.thinkstack.dto.request.StartSessionRequest;
 import com.thinkstack.dto.response.ApiResponse;
+import com.thinkstack.dto.response.ComparisonResponse;
 import com.thinkstack.dto.response.DecisionSessionResponse;
 import com.thinkstack.dto.response.RecommendationResponse;
 import com.thinkstack.service.DecisionService;
@@ -65,6 +66,16 @@ public class DecisionController {
     public ApiResponse<List<RecommendationResponse>> getRecommendations(
             @PathVariable UUID sessionId) {
         return ApiResponse.ok(decisionService.getRecommendations(sessionId));
+    }
+
+    @GetMapping("/{sessionId}/compare")
+    public ApiResponse<ComparisonResponse> compare(@PathVariable UUID sessionId) {
+        return ApiResponse.ok(decisionService.compareSession(sessionId, false));
+    }
+
+    @GetMapping("/{sessionId}/compare/alternatives")
+    public ApiResponse<ComparisonResponse> compareAlternatives(@PathVariable UUID sessionId) {
+        return ApiResponse.ok(decisionService.compareSession(sessionId, true));
     }
 
     @PostMapping("/{sessionId}/alternatives/{productId}")
