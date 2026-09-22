@@ -74,6 +74,24 @@ Recommendation `data` per product: `{ id, rankPosition, product: ProductSummary,
 `budgetCategory`: `WITHIN_BUDGET` / `SLIGHTLY_ABOVE_BUDGET` / `PREMIUM_ALTERNATIVE` / `EXCEPTIONAL_VALUE` / `NOT_SUITABLE`.
 Scoring: weighted (feature 40 / value 25 / sentiment 20 / performance 15) using wizard question weights shifted by the user's importance answers; dimension scores are computed from live product specs (RAM/CPU, battery hours, weight, resolution, GPU).
 
+## Price Alerts (implemented, auth required)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/price-alerts` | token | Create alert: `{ productId, targetPrice }` -> 201; duplicate -> 400 `ALREADY_EXISTS` |
+| GET | `/api/v1/price-alerts/mine` | token | My alerts, newest first, with `currentBestPrice` + `status` (`TRIGGERED`/`ACTIVE`) |
+| POST | `/api/v1/price-alerts/check` | token | Evaluate active alerts vs today's cheapest price; emits notifications (idempotent per alert) |
+| POST | `/api/v1/price-alerts/{alertId}/toggle` | token | Activate/deactivate |
+| DELETE | `/api/v1/price-alerts/{alertId}` | token | Delete |
+
+## Notifications (implemented, auth required)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/notifications` | token | My notifications; `?unreadOnly=true` for unread only |
+| GET | `/api/v1/notifications/unread-count` | token | `{ count }` |
+| POST | `/api/v1/notifications/{id}/read` | token | Mark one read |
+| POST | `/api/v1/notifications/read-all` | token | Mark all read, returns `{ markedRead }` |
+| DELETE | `/api/v1/notifications/{id}` | token | Delete |
+
 ## Planned surfaces (skeleton)
 | User | `/api/v1/users/me` | profile, preferences, DNA, journal, bookmarks, notifications |
 

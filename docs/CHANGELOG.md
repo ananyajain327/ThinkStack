@@ -5,6 +5,12 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Price alerts + notifications (Phase 3c)**:
+  - `price_alerts` table (V7), entity + repository
+  - CRUD + toggle for user price alerts; `status` reflects trigger vs current best price
+  - `POST /price-alerts/check` evaluates active alerts against the cheapest live seller
+    price and emits `PRICE_ALERT` notifications (idempotent per alert)
+  - Notification endpoints: list (all/unread), unread-count, mark-read, read-all, delete
 - **Comparison endpoints (Phase 3b)**:
   - Side-by-side comparison of a session's ranked recommendations (`/compare`)
     or shortlist (`/compare/alternatives`)

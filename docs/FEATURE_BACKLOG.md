@@ -34,10 +34,10 @@ Status: `done` · `in progress` · `todo` · `deferred`
 - Budget Guard + category logic + comparison endpoints
 - Decision session + DNA + journal persistence — sessions done; DNA/journal `todo`
 
-## Personalization (P2) — `todo`
-- Dashboard feed, bookmarks, notifications/price-alerts
-- User preferences + decision DNA endpoints
-- Bookmars/journal/dna read+write endpoints
+## Personalization (P2) — `in progress`
+- Dashboard feed, bookmarks, notifications/price-alerts — notifications + price-alerts `done`
+- User preferences + decision DNA endpoints — `todo`
+- Bookmars/journal/dna read+write endpoints — bookmarks/journal/DNA `todo`
 
 ## Frontend (P2) — `todo`
 - Next.js shell, landing, auth screens

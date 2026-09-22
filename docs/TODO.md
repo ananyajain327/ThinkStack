@@ -14,7 +14,7 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] **Decision engine** — sessions, adaptive answers, ranked recommendations + explainability, alternatives shortlist
 - [x] **Comparison endpoints** — side-by-side specs/prices for recommendations or shortlist
 - [ ] Explainability payloads iteration (per-dimension notes per product)
-- [ ] Price history + price alerts + notifications
+- [x] **Price alerts + notifications** — price-alert CRUD/`check` (price-drop detection), notification list/read/read-all/delete
 - [ ] Bookmarks, journal, decision DNA
 - [ ] Backend service/controller layer completeness
 
