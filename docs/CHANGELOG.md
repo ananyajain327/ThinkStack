@@ -5,6 +5,13 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Bookmarks, journal + decision DNA (Phase 3d)**:
+  - Bookmark products or decision sessions (dedupe + ownership enforced)
+  - Post-purchase journal: create/list/update/delete with outcome + satisfaction
+  - Decision DNA: persisted per-user factors derived from completed sessions'
+    priority weights (relative 0-100) and journal satisfaction ratings;
+    recomputed on journal writes and via `POST /dna/refresh`
+  - Fixed `decision_journal.updated_at` NOT NULL violation by adding `@UpdateTimestamp`
 - **Price alerts + notifications (Phase 3c)**:
   - `price_alerts` table (V7), entity + repository
   - CRUD + toggle for user price alerts; `status` reflects trigger vs current best price

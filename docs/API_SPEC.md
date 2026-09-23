@@ -92,6 +92,21 @@ Scoring: weighted (feature 40 / value 25 / sentiment 20 / performance 15) using 
 | POST | `/api/v1/notifications/read-all` | token | Mark all read, returns `{ markedRead }` |
 | DELETE | `/api/v1/notifications/{id}` | token | Delete |
 
+## Bookmarks / Journal / Decision DNA (implemented, auth required)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/api/v1/bookmarks` | token | Add: `{ bookmarkType: PRODUCT\|SESSION, productId?, sessionId? }` -> 201; duplicate product -> 400 `ALREADY_EXISTS` |
+| GET | `/api/v1/bookmarks` | token | My bookmarks; `?type=PRODUCT\|SESSION` filters |
+| DELETE | `/api/v1/bookmarks/{id}` | token | Remove |
+| POST | `/api/v1/journal` | token | Create entry: `{ sessionId?, productId?, title, notes?, outcome?, outcomeNotes?, satisfactionRating? 1-5, wouldBuyAgain?, tags? }` -> 201 |
+| GET | `/api/v1/journal` | token | My entries, newest first |
+| PUT | `/api/v1/journal/{id}` | token | Update entry |
+| DELETE | `/api/v1/journal/{id}` | token | Delete entry |
+| GET | `/api/v1/dna` | token | My decision DNA factors (persisted) |
+| POST | `/api/v1/dna/refresh` | token | Recompute DNA from completed sessions + journal; returns factors |
+
+DNA factors: `priority.<dimension>` (relative 0-100 across a session's priority weights) and `satisfaction` (0-100 from journal ratings). Cross-user access -> 400 `FORBIDDEN`.
+
 ## Planned surfaces (skeleton)
 | User | `/api/v1/users/me` | profile, preferences, DNA, journal, bookmarks, notifications |
 
