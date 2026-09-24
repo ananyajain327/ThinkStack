@@ -107,6 +107,14 @@ Scoring: weighted (feature 40 / value 25 / sentiment 20 / performance 15) using 
 
 DNA factors: `priority.<dimension>` (relative 0-100 across a session's priority weights) and `satisfaction` (0-100 from journal ratings). Cross-user access -> 400 `FORBIDDEN`.
 
+## User preferences (implemented, auth required)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/me/preferences` | token | My saved preferences (defaults created on read: `INR`, `notifyPriceDrops=true`) |
+| PUT | `/api/v1/me/preferences` | token | Update: `{ experienceLevel: BEGINNER\|INTERMEDIATE\|ADVANCED, brandPreferences: string[], osPreferences: string[], defaultCurrency: INR\|USD\|EUR, notifyPriceDrops: boolean }`; validation -> 400 `VALIDATION_ERROR` |
+
+Recommendation `explainability` now includes a `dimensions` object: per-dimension `score`, `importance` (0-100 from the user's answer weights) and human-readable `detail`/`verdict`.
+
 ## Planned surfaces (skeleton)
 | User | `/api/v1/users/me` | profile, preferences, DNA, journal, bookmarks, notifications |
 

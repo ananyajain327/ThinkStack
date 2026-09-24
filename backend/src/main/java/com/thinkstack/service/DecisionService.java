@@ -676,7 +676,50 @@ public class DecisionService {
         if (!candidate.score.dealBreakers.isEmpty()) {
             explain.put("dealBreakers", candidate.score.dealBreakers);
         }
+        Map<String, Object> dimensionNotes = new LinkedHashMap<>();
+        Map<String, Double> weights = candidate.score.usedWeights;
+        for (Map.Entry<String, Double> e : candidate.score.dimensions.entrySet()) {
+            String dim = e.getKey();
+            Double score = e.getValue();
+            Double importance = weights.get(dim);
+            if (importance == null) continue;
+            Map<String, Object> note = new LinkedHashMap<>();
+            note.put("score", round(score * 100));
+            note.put("importance", round(importance / 5 * 100));
+            note.put("verdict", verdict(score));
+            note.put("detail", dimensionDetail(dim, score));
+            dimensionNotes.put(dim, note);
+        }
+        explain.put("dimensions", dimensionNotes);
         return json(explain);
+    }
+
+    private String verdict(double score) {
+        if (score >= 0.8) return "Excellent fit";
+        if (score >= 0.6) return "Good fit";
+        if (score >= 0.4) return "Moderate fit";
+        return "Weak fit";
+    }
+
+    private String dimensionDetail(String dim, double score) {
+        return switch (dim) {
+            case "performance" -> score >= 0.8
+                    ? "Strong processor and RAM keep up with demanding workloads."
+                    : "The processor/RAM combo may feel limited for heavy tasks.";
+            case "battery" -> score >= 0.8
+                    ? "Long battery life that comfortably covers a full day."
+                    : "Battery life is modest; a charger will often be needed.";
+            case "portability" -> score >= 0.8
+                    ? "Light and easy to carry around."
+                    : "Heavier than ideal for frequent travel.";
+            case "display" -> score >= 0.8
+                    ? "Sharp high-resolution panel with a good screen area."
+                    : "The display is average, not a standout feature.";
+            case "gaming" -> score >= 0.8
+                    ? "Discrete GPU handles modern games well."
+                    : "Lacks the dedicated GPU modern games expect.";
+            default -> "Rated based on your stated importance.";
+        };
     }
 
     private double round(double d) {

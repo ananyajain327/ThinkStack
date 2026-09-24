@@ -5,6 +5,11 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **User preferences + explainability iteration (Phase 3e)**:
+  - `GET/PUT /api/v1/me/preferences`: experience level, brand/OS prefs,
+    default currency, price-drop notifications; defaults auto-created on read
+  - Recommendations `explainability` payload now carries per-dimension
+    `score`/`importance`/`detail`/`verdict` notes per product
 - **Bookmarks, journal + decision DNA (Phase 3d)**:
   - Bookmark products or decision sessions (dedupe + ownership enforced)
   - Post-purchase journal: create/list/update/delete with outcome + satisfaction

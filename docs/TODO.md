@@ -13,11 +13,11 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] **API baseline — catalog** — products, categories, specs, prices, reviews, wizard
 - [x] **Decision engine** — sessions, adaptive answers, ranked recommendations + explainability, alternatives shortlist
 - [x] **Comparison endpoints** — side-by-side specs/prices for recommendations or shortlist
-- [ ] Explainability payloads iteration (per-dimension notes per product)
+- [x] **Explainability payloads iteration** — per-dimension `score`/`importance`/`detail`/`verdict` notes in recommendation `explainability`
 - [x] **Price alerts + notifications** — price-alert CRUD/`check` (price-drop detection), notification list/read/read-all/delete
 - [x] **Bookmarks, journal, decision DNA** — bookmark products/sessions, journal CRUD, DNA refresh + persist
-- [ ] User preferences endpoint (`/api/v1/me/preferences`)
-- [ ] Backend service/controller layer completeness
+- [x] **User preferences endpoint** — `GET/PUT /api/v1/me/preferences` (experience, brands, OS, currency, notify flags)
+- [ ] Dashboard feed endpoints (`/api/v1/feed`)
 - [ ] Backend service/controller layer completeness
 
 ## Phase 2 Frontend  (`[ ]` not started)
