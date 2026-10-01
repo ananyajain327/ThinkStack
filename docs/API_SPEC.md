@@ -115,6 +115,11 @@ DNA factors: `priority.<dimension>` (relative 0-100 across a session's priority 
 
 Recommendation `explainability` now includes a `dimensions` object: per-dimension `score`, `importance` (0-100 from the user's answer weights) and human-readable `detail`/`verdict`.
 
+## Dashboard feed (implemented, auth required)
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/v1/feed?limit=25` | token | Unified chronological feed mixing the user's decision sessions (`type=session`), price alerts (`type=price_alert`, `status=ACTIVE\|PAUSED`) and notifications (`type=notification`, `read=true\|false`). `limit` clamped to 5..100; items sorted newest-first. |
+
 ## Planned surfaces (skeleton)
 | User | `/api/v1/users/me` | profile, preferences, DNA, journal, bookmarks, notifications |
 

@@ -17,7 +17,8 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] **Price alerts + notifications** — price-alert CRUD/`check` (price-drop detection), notification list/read/read-all/delete
 - [x] **Bookmarks, journal, decision DNA** — bookmark products/sessions, journal CRUD, DNA refresh + persist
 - [x] **User preferences endpoint** — `GET/PUT /api/v1/me/preferences` (experience, brands, OS, currency, notify flags)
-- [ ] Dashboard feed endpoints (`/api/v1/feed`)
+- [x] **Dashboard feed** — `GET /api/v1/feed` (sessions + price alerts + notifications, newest-first)
+- [x] **Backend service/controller layer completeness** — all planned personalization surfaces implemented
 - [ ] Backend service/controller layer completeness
 
 ## Phase 2 Frontend  (`[ ]` not started)

@@ -5,6 +5,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Dashboard feed (Phase 3f)**: `GET /api/v1/feed` — unified chronological
+  activity feed across decision sessions, price alerts and notifications
+  (401 without token, newest-first, `?limit=` 5..100)
 - **User preferences + explainability iteration (Phase 3e)**:
   - `GET/PUT /api/v1/me/preferences`: experience level, brand/OS prefs,
     default currency, price-drop notifications; defaults auto-created on read
