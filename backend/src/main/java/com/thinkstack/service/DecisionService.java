@@ -69,6 +69,7 @@ public class DecisionService {
     private final DecisionAlternativeRepository alternativeRepository;
     private final SpecificationDefinitionRepository specDefinitionRepository;
     private final ObjectMapper objectMapper;
+    private final RecommendationEngine engine;
 
     public DecisionService(DecisionSessionRepository sessionRepository,
                            DecisionWizardRepository wizardRepository,
@@ -80,7 +81,8 @@ public class DecisionService {
                            RecommendationRepository recommendationRepository,
                            DecisionAlternativeRepository alternativeRepository,
                            SpecificationDefinitionRepository specDefinitionRepository,
-                           ObjectMapper objectMapper) {
+                           ObjectMapper objectMapper,
+                           RecommendationEngine engine) {
         this.sessionRepository = sessionRepository;
         this.wizardRepository = wizardRepository;
         this.questionRepository = questionRepository;
@@ -92,6 +94,7 @@ public class DecisionService {
         this.alternativeRepository = alternativeRepository;
         this.specDefinitionRepository = specDefinitionRepository;
         this.objectMapper = objectMapper;
+        this.engine = engine;
     }
 
     // ---------- session lifecycle ----------
@@ -190,11 +193,13 @@ public class DecisionService {
 
         List<Candidate> candidates = new java.util.ArrayList<>();
         for (Product product : products) {
-            Score score = scoreProduct(product, specsByProduct.get(product.getId()), weights,
+            RecommendationEngine.ProductInput input = toEngineInput(product, specsByProduct.get(product.getId()));
+            RecommendationEngine.Constraints constraints = new RecommendationEngine.Constraints(
                     budgetMax, osPreference, ramMin, storageMin, preferredBrands);
+            RecommendationEngine.Result score = engine.score(input, constraints, weights);
             candidates.add(new Candidate(product, score));
         }
-        candidates.sort(Comparator.comparing((Candidate c) -> c.score.overall).reversed());
+        candidates.sort(Comparator.comparing((Candidate c) -> c.score.overall()).reversed());
 
         int rank = 1;
         for (Candidate candidate : candidates) {
@@ -202,19 +207,19 @@ public class DecisionService {
                     .session(session)
                     .product(candidate.product)
                     .rankPosition(rank)
-                    .overallScore(bd(candidate.score.overall))
-                    .confidenceRating(bd(candidate.score.confidence))
-                    .budgetCategory(candidate.score.budgetCategory)
-                    .valueScore(bd(candidate.score.value))
-                    .featureMatch(bd(candidate.score.featureMatch))
-                    .performanceMatch(bd(candidate.score.performanceMatch))
-                    .reviewSentiment(bd(candidate.score.reviewSentiment))
+                    .overallScore(bd(candidate.score.overall()))
+                    .confidenceRating(bd(candidate.score.confidence()))
+                    .budgetCategory(candidate.score.budgetCategory())
+                    .valueScore(bd(candidate.score.value()))
+                    .featureMatch(bd(candidate.score.featureMatch()))
+                    .performanceMatch(bd(candidate.score.performanceMatch()))
+                    .reviewSentiment(bd(candidate.score.reviewSentiment()))
                     .scoreBreakdown(scoreBreakdownJson(candidate.score))
                     .explainability(explainabilityJson(candidate))
-                    .advantages(json(candidate.score.advantages))
-                    .disadvantages(json(candidate.score.disadvantages))
-                    .dealBreakers(json(candidate.score.dealBreakers))
-                    .tradeOffs(json(candidate.score.tradeOffs))
+                    .advantages(json(candidate.score.advantages()))
+                    .disadvantages(json(candidate.score.disadvantages()))
+                    .dealBreakers(json(candidate.score.dealBreakers()))
+                    .tradeOffs(json(candidate.score.tradeOffs()))
                     .build();
             recommendationRepository.save(rec);
             rank++;
@@ -358,193 +363,17 @@ public class DecisionService {
                 .forEach(alternativeRepository::delete);
     }
 
-    // ---------- scoring engine ----------
+    // ---------- scoring engine adapter ----------
 
-    private Score scoreProduct(Product product,
-                               Map<String, ProductSpecification> specs,
-                               Map<String, Double> weights,
-                               BigDecimal budgetMax,
-                               String osPreference,
-                               BigDecimal ramMin,
-                               BigDecimal storageMin,
-                               Set<String> preferredBrands) {
-        BigDecimal bestPrice = bestPrice(product);
-        List<String> advantages = new java.util.ArrayList<>();
-        List<String> disadvantages = new java.util.ArrayList<>();
-        List<String> dealBreakers = new java.util.ArrayList<>();
-        List<String> tradeOffs = new java.util.ArrayList<>();
-
-        // per-dimension 0..1 scores, 0.5 neutral default so unknowns don't destroy everything
-        Map<String, Double> dimensions = new LinkedHashMap<>();
-        dimensions.put("performance", performanceScore(product, specs));
-        dimensions.put("battery", batteryScore(specs));
-        dimensions.put("portability", portabilityScore(specs));
-        dimensions.put("display", displayScore(specs));
-        dimensions.put("gaming", gamingScore(specs));
-
-        double weightedSum = 0;
-        double weightTotal = 0;
-        Map<String, Double> usedWeights = new LinkedHashMap<>();
-        for (Map.Entry<String, Double> e : weights.entrySet()) {
-            Double dimension = dimensions.get(e.getKey());
-            if (dimension == null) continue;
-            usedWeights.put(e.getKey(), e.getValue());
-            weightedSum += dimension * e.getValue();
-            weightTotal += e.getValue();
-        }
-        double featureMatch = weightTotal == 0 ? 50 : (weightedSum / weightTotal) * 100;
-
-        // performance vs explicit minimums
-        double perfMatch = adequacy(ramOf(specs), ramMin) * 0.5
-                + adequacy(storageOf(specs), storageMin) * 0.5;
-        double performanceMatch = perfMatch * 100;
-
-        // review sentiment from product aggregate
-        double reviewSentiment = product.getAvgRating() == null
-                ? 70 : product.getAvgRating().doubleValue() / 5 * 100;
-
-        // value: within budget -> more value the lower price is (relative to budget)
-        double value;
-        if (budgetMax != null && budgetMax.signum() > 0) {
-            double ratio = bestPrice.doubleValue() / budgetMax.doubleValue();
-            value = Math.max(0, Math.min(100, 100 - (ratio - 0.3) * 55));
-        } else {
-            // no budget: rank by having a reasonable low end but not suspiciously cheap
-            value = Math.min(100, Math.max(40, (bestPrice == null ? 0 : bestPrice.doubleValue())
-                    >= 1000 ? 75 : 45));
-        }
-
-        double overall = featureMatch * 0.40 + value * 0.25
-                + reviewSentiment * 0.20 + performanceMatch * 0.15;
-
-        // budget category
-        String budgetCategory = classifyBudget(bestPrice, budgetMax, value);
-
-        // hard constraints / explainability
-        if (budgetMax != null && bestPrice != null && bestPrice.compareTo(budgetMax) > 0) {
-            dealBreakers.add("Price ₹" + bestPrice + " exceeds your maximum budget of ₹" + budgetMax);
-        }
-        String os = text(specs, "os");
-        if (!"any".equals(osPreference) && !osPreference.isEmpty() && os != null
-                && !os.toLowerCase().contains(osPreference.toLowerCase())) {
-            dealBreakers.add("Runs " + os + " but you asked for " + osPreference);
-        }
-        if (!preferredBrands.isEmpty() && !preferredBrands.isEmpty()
-                && product.getBrand() != null
-                && !preferredBrands.contains(product.getBrand().toLowerCase())) {
-            tradeOffs.add("Not one of your preferred brands (" + String.join(", ", preferredBrands) + ")");
-        }
-        if (dealBreakers.isEmpty()) {
-            advantages.add("Within your budget at ₹" + bestPrice);
-        }
-        String topDim = dimensions.entrySet().stream()
-                .max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("");
-        if (!topDim.isEmpty() && dimensions.get(topDim) >= 0.7) {
-            advantages.add("Excellent " + topDim.replace('_', ' ') + " ("
-                    + Math.round(dimensions.get(topDim) * 100) + "% of ideal)");
-        } else if (!disadvantages.isEmpty()) {
-            // no-op placeholder to keep list stable
-        }
-        dimensions.forEach((dim, val) -> {
-            if (val < 0.4) {
-                disadvantages.add("Weak " + dim.replace('_', ' ') + " ("
-                        + Math.round(val * 100) + "% of ideal)");
-            }
-        });
-        if (!preferredBrands.isEmpty() && product.getBrand() != null
-                && preferredBrands.contains(product.getBrand().toLowerCase())) {
-            advantages.add("Matches your preferred brand " + product.getBrand());
-        }
-        if (performanceMatch < 40) {
-            tradeOffs.add("Performance/storage may fall short of what you asked for");
-        }
-
-        double confidence = 50 + 40 * (weightTotal == 0 ? 0 : 1);
-
-        return new Score(overall, confidence, budgetCategory, value, featureMatch,
-                performanceMatch, reviewSentiment, dimensions, usedWeights,
-                advantages, disadvantages, dealBreakers, tradeOffs, bestPrice);
-    }
-
-    private double performanceScore(Product product, Map<String, ProductSpecification> specs) {
-        BigDecimal ram = ramOf(specs);
-        double ramScore = ram == null ? 0.5 : Math.min(1, ram.doubleValue() / 16.0);
-        String cpu = text(specs, "processor");
-        double cpuScore = 0.6;
-        if (cpu != null) {
-            String c = cpu.toLowerCase();
-            if (c.contains("i9") || c.contains("ryzen 9") || c.contains("m3") || c.contains("m2 pro")
-                    || c.contains("m2 max") || c.contains("m1 max") || c.contains("core ultra")) {
-                cpuScore = 1.0;
-            } else if (c.contains("i7") || c.contains("ryzen 7") || c.contains("m2") || c.contains("m1 pro")) {
-                cpuScore = 0.9;
-            } else if (c.contains("i5") || c.contains("ryzen 5") || c.contains("m1")) {
-                cpuScore = 0.8;
-            } else if (c.contains("i3") || c.contains("celeron") || c.contains("pentium")) {
-                cpuScore = 0.4;
-            }
-        }
-        return ramScore * 0.6 + cpuScore * 0.4;
-    }
-
-    private double batteryScore(Map<String, ProductSpecification> specs) {
-        BigDecimal hours = num(specs, "battery_life");
-        if (hours == null) return 0.5;
-        return Math.min(1, hours.doubleValue() / 15.0);
-    }
-
-    private double portabilityScore(Map<String, ProductSpecification> specs) {
-        BigDecimal weight = num(specs, "weight");
-        if (weight == null) return 0.5;
-        // lighter is better: 1.7 kg ideal
-        return Math.max(0, Math.min(1, (2.6 - weight.doubleValue()) / 1.1));
-    }
-
-    private double displayScore(Map<String, ProductSpecification> specs) {
-        String res = text(specs, "display_resolution");
-        BigDecimal size = num(specs, "display_size");
-        double resScore = 0.5;
-        if (res != null) {
-            String r = res.toLowerCase();
-            if (r.contains("4k") || r.contains("retina") || r.contains("qhd") || r.contains("2k")
-                    || r.contains("1440p")) {
-                resScore = 1.0;
-            } else if (r.contains("1080p") || r.contains("fhd")) {
-                resScore = 0.8;
-            } else if (r.contains("768p") || r.contains("1366")) {
-                resScore = 0.4;
-            }
-        }
-        double sizeScore = size == null ? 0.5 : Math.min(1, size.doubleValue() / 15.5);
-        return resScore * 0.7 + sizeScore * 0.3;
-    }
-
-    private double gamingScore(Map<String, ProductSpecification> specs) {
-        String gpu = text(specs, "gpu");
-        if (gpu == null) return 0.3;
-        String g = gpu.toLowerCase();
-        if (g.contains("rtx") || g.contains("gtx") || g.contains("geforce")) return 1.0;
-        if (g.contains("radeon") || g.contains("arc") || g.contains("m2") || g.contains("m3")) return 0.8;
-        if (g.contains("iris") || g.contains("uhd") || g.contains("graphics")) return 0.4;
-        return 0.5;
-    }
-
-    private String classifyBudget(BigDecimal price, BigDecimal budgetMax, double value) {
-        if (budgetMax == null || budgetMax.signum() <= 0) {
-            return value >= 70 ? "EXCEPTIONAL_VALUE" : "WITHIN_BUDGET";
-        }
-        if (price == null) return "NOT_SUITABLE";
-        double ratio = price.doubleValue() / budgetMax.doubleValue();
-        if (ratio > 1.3) return "NOT_SUITABLE";
-        if (ratio > 1.1) return "PREMIUM_ALTERNATIVE";
-        if (ratio > 1.0) return "SLIGHTLY_ABOVE_BUDGET";
-        return value >= 70 ? "EXCEPTIONAL_VALUE" : "WITHIN_BUDGET";
-    }
-
-    private double adequacy(BigDecimal have, BigDecimal need) {
-        if (need == null || need.signum() <= 0) return 1.0;
-        if (have == null) return 0;
-        return Math.min(1, have.doubleValue() / need.doubleValue());
+    private RecommendationEngine.ProductInput toEngineInput(
+            Product product, Map<String, ProductSpecification> specs) {
+        Map<String, RecommendationEngine.SpecValue> specValues = new LinkedHashMap<>();
+        specs.forEach((key, spec) -> specValues.put(key,
+                new RecommendationEngine.SpecValue(
+                        spec.getTextValue(), spec.getNumericValue(), spec.getBooleanValue())));
+        return new RecommendationEngine.ProductInput(
+                product.getBrand(), product.getAvgRating(), product.getReviewCount(),
+                bestPrice(product), specValues);
     }
 
     // ---------- helpers ----------
@@ -583,33 +412,13 @@ public class DecisionService {
         Map<String, WizardQuestion> questions = questionRepository
                 .findByWizardIdOrderByDisplayOrderAsc(wizard.getId()).stream()
                 .collect(Collectors.toMap(WizardQuestion::getQuestionKey, Function.identity()));
-        Map<String, Double> weights = new LinkedHashMap<>();
+        Map<String, Double> questionWeights = new LinkedHashMap<>();
         for (String dim : List.of("performance", "battery", "portability", "display", "gaming")) {
             WizardQuestion question = questions.get(dim);
             if (question == null) continue;
-            double base = question.getWeight() == null ? 1.0 : question.getWeight().doubleValue();
-            double importance = importance(profile.get(dim));
-            double w = base * (importance == 0 ? 0.6 : importance);
-            if (importance == 0 && !profile.containsKey(dim)) w = base * 0.5;
-            weights.put(dim, Math.max(0.1, w));
+            questionWeights.put(dim, question.getWeight() == null ? 1.0 : question.getWeight().doubleValue());
         }
-        // purpose boosts
-        String purpose = clean(profile.get("purpose"));
-        if ("programming".equals(purpose)) weights.put("performance", weights.getOrDefault("performance", 1.0) * 1.4);
-        if ("gaming".equals(purpose)) weights.put("gaming", weights.getOrDefault("gaming", 1.0) * 1.4);
-        if ("office".equals(purpose)) weights.put("battery", weights.getOrDefault("battery", 1.0) * 1.3);
-        if ("portability".equals(purpose)) weights.put("portability", weights.getOrDefault("portability", 1.0) * 1.3);
-        return weights;
-    }
-
-    private double importance(String raw) {
-        try {
-            double v = Double.parseDouble(clean(raw));
-            v = Math.max(0, Math.min(5, v));
-            return v / 5.0;
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        return engine.deriveWeights(questionWeights, profile);
     }
 
     private Set<String> multiChoice(String rawJson) {
@@ -654,40 +463,41 @@ public class DecisionService {
         return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private String scoreBreakdownJson(Score score) {
+    private String scoreBreakdownJson(RecommendationEngine.Result score) {
         Map<String, Double> breakdown = new LinkedHashMap<>();
-        breakdown.put("overall", round(score.overall));
-        breakdown.put("featureMatch", round(score.featureMatch));
-        breakdown.put("value", round(score.value));
-        breakdown.put("reviewSentiment", round(score.reviewSentiment));
-        breakdown.put("performanceMatch", round(score.performanceMatch));
-        score.dimensions.forEach((dim, val) -> breakdown.put("dim." + dim, round(val * 100)));
-        score.usedWeights.forEach((dim, w) -> breakdown.put("weight." + dim, round(w / 5 * 100)));
+        breakdown.put("overall", round(score.overall()));
+        breakdown.put("featureMatch", round(score.featureMatch()));
+        breakdown.put("value", round(score.value()));
+        breakdown.put("reviewSentiment", round(score.reviewSentiment()));
+        breakdown.put("performanceMatch", round(score.performanceMatch()));
+        score.dimensions().forEach((dim, val) -> breakdown.put("dim." + dim, round(val * 100)));
+        score.usedWeights().forEach((dim, w) -> breakdown.put("weight." + dim, round(w / 5 * 100)));
         return json(breakdown);
     }
 
     private String explainabilityJson(Candidate candidate) {
+        RecommendationEngine.Result score = candidate.score;
         Map<String, Object> explain = new LinkedHashMap<>();
         explain.put("summary", "This option scored "
-                + Math.round(candidate.score.overall) + "/100 overall based on your answers.");
-        explain.put("bestFeatures", candidate.score.advantages);
-        explain.put("weaknesses", candidate.score.disadvantages);
-        explain.put("budgetNote", candidate.score.budgetCategory.replace('_', ' ').toLowerCase());
-        if (!candidate.score.dealBreakers.isEmpty()) {
-            explain.put("dealBreakers", candidate.score.dealBreakers);
+                + Math.round(score.overall()) + "/100 overall based on your answers.");
+        explain.put("bestFeatures", score.advantages());
+        explain.put("weaknesses", score.disadvantages());
+        explain.put("budgetNote", score.budgetCategory().replace('_', ' ').toLowerCase());
+        if (!score.dealBreakers().isEmpty()) {
+            explain.put("dealBreakers", score.dealBreakers());
         }
         Map<String, Object> dimensionNotes = new LinkedHashMap<>();
-        Map<String, Double> weights = candidate.score.usedWeights;
-        for (Map.Entry<String, Double> e : candidate.score.dimensions.entrySet()) {
+        Map<String, Double> weights = score.usedWeights();
+        for (Map.Entry<String, Double> e : score.dimensions().entrySet()) {
             String dim = e.getKey();
-            Double score = e.getValue();
+            Double dimScore = e.getValue();
             Double importance = weights.get(dim);
             if (importance == null) continue;
             Map<String, Object> note = new LinkedHashMap<>();
-            note.put("score", round(score * 100));
+            note.put("score", round(dimScore * 100));
             note.put("importance", round(importance / 5 * 100));
-            note.put("verdict", verdict(score));
-            note.put("detail", dimensionDetail(dim, score));
+            note.put("verdict", verdict(dimScore));
+            note.put("detail", dimensionDetail(dim, dimScore));
             dimensionNotes.put(dim, note);
         }
         explain.put("dimensions", dimensionNotes);
@@ -762,43 +572,6 @@ public class DecisionService {
 
     // ---------- value objects ----------
 
-    private record Candidate(Product product, Score score) {
-    }
-
-    private record Score(double overall, double confidence, String budgetCategory,
-                         double value, double featureMatch, double performanceMatch,
-                         double reviewSentiment, Map<String, Double> dimensions,
-                         Map<String, Double> usedWeights, List<String> advantages,
-                         List<String> disadvantages, List<String> dealBreakers,
-                         List<String> tradeOffs, BigDecimal bestPrice) {
-    }
-
-    // small numeric helpers on specs
-    private BigDecimal ramOf(Map<String, ProductSpecification> specs) {
-        return num(specs, "ram");
-    }
-
-    private BigDecimal storageOf(Map<String, ProductSpecification> specs) {
-        return num(specs, "storage");
-    }
-
-    private BigDecimal num(Map<String, ProductSpecification> specs, String key) {
-        ProductSpecification s = specs.get(key);
-        if (s == null) return null;
-        if (s.getNumericValue() != null) return s.getNumericValue();
-        if (s.getBooleanValue() != null) return s.getBooleanValue() ? BigDecimal.ONE : BigDecimal.ZERO;
-        if (s.getTextValue() != null) {
-            try {
-                return new BigDecimal(s.getTextValue().replaceAll("[^0-9.]", ""));
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private String text(Map<String, ProductSpecification> specs, String key) {
-        ProductSpecification s = specs.get(key);
-        return s == null ? null : s.getTextValue();
+    private record Candidate(Product product, RecommendationEngine.Result score) {
     }
 }
