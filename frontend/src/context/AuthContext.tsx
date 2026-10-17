@@ -2,18 +2,17 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import api from '../api/client'
 
 interface User {
-  id: string
-  email: string
+  userId: string
   username: string
-  name: string
+  email: string
   role: string
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, username: string, password: string, name: string) => Promise<void>
+  login: (usernameOrEmail: string, password: string) => Promise<void>
+  register: (username: string, email: string, password: string, displayName?: string) => Promise<void>
   logout: () => void
 }
 
@@ -25,33 +24,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
-    if (token) {
-      api.get('/auth/me')
-        .then(res => setUser(res.data))
-        .catch(() => {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-        })
-        .finally(() => setLoading(false))
-    } else {
+    if (!token) {
       setLoading(false)
+      return
     }
+    api.get('/auth/me')
+      .then(res => {
+        const d = res.data.data
+        setUser({ userId: d.userId, username: d.username, email: d.email, role: d.role })
+      })
+      .catch(() => {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+      })
+      .finally(() => setLoading(false))
   }, [])
 
-  const login = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password })
-    const { accessToken, refreshToken, user: userData } = res.data
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    setUser(userData)
+  const login = async (usernameOrEmail: string, password: string) => {
+    const res = await api.post('/auth/login', { usernameOrEmail, password })
+    const d = res.data.data
+    localStorage.setItem('accessToken', d.accessToken)
+    localStorage.setItem('refreshToken', d.refreshToken)
+    setUser({ userId: d.userId, username: d.username, email: d.email, role: d.role })
   }
 
-  const register = async (email: string, username: string, password: string, name: string) => {
-    const res = await api.post('/auth/register', { email, username, password, name })
-    const { accessToken, refreshToken, user: userData } = res.data
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    setUser(userData)
+  const register = async (username: string, email: string, password: string, displayName?: string) => {
+    const res = await api.post('/auth/register', { username, email, password, displayName })
+    const d = res.data.data
+    localStorage.setItem('accessToken', d.accessToken)
+    localStorage.setItem('refreshToken', d.refreshToken)
+    setUser({ userId: d.userId, username: d.username, email: d.email, role: d.role })
   }
 
   const logout = () => {

@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Register() {
-  const [name, setName] = useState('')
   const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -17,7 +17,7 @@ export default function Register() {
     setError('')
     setLoading(true)
     try {
-      await register(email, username, password, name)
+      await register(username, email, password, displayName || undefined)
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.')
@@ -43,21 +43,6 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Jane Doe"
-              />
-            </div>
-
-            <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
                 Username
               </label>
@@ -65,10 +50,27 @@ export default function Register() {
                 id="username"
                 type="text"
                 required
+                minLength={3}
+                maxLength={100}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="janedoe"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
+                Display Name <span className="text-gray-400">(optional)</span>
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                maxLength={150}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Jane Doe"
               />
             </div>
 
@@ -96,11 +98,13 @@ export default function Register() {
                 type="password"
                 required
                 minLength={8}
+                maxLength={72}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="••••••••"
               />
+              <p className="mt-1 text-xs text-gray-500">At least 8 characters</p>
             </div>
 
             <button
