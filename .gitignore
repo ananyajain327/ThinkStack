@@ -1,39 +1,44 @@
-# IntelliJ / IDE
+# IntelliJ
 .idea/
 *.iml
 *.ipr
-*.iws
-.vscode/
-*.swp
 
-# Java / Maven
+# Java
 target/
 *.class
+
+# Maven
 .mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
 
-# Node / Next.js
+# Node
 node_modules/
-.next/
-out/
-dist/
 
-# Environment & secrets
-.env
-.env.*
-!.env.example
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+
+# Backend
+backend/target/
+backend/.env
 
 # Database
-*.sqlite3
-postgres_data/
+database/*.log
+
+# Environment
+.env
+*.env
+env.properties
 
 # Logs
 *.log
-npm-debug.log*
+logs/
 
-# OS
+# VS Code
+.vscode/
+
+# OS Files
 .DS_Store
 Thumbs.db
-
-# Test / coverage
-coverage/
-.nyc_output/
