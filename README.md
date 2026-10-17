@@ -39,11 +39,11 @@ ThinkStack solves all of this in one place — no juggling multiple comparison w
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | Next.js · React · TypeScript · Tailwind CSS |
+| Frontend | React · Vite · TypeScript · Tailwind CSS |
 | Backend | Java · Spring Boot · Spring Web · Spring Data JPA · Hibernate |
 | Security | Spring Security · JWT · BCrypt |
 | Database | PostgreSQL · Flyway migrations |
-| Tooling | Maven · Git & GitHub · IntelliJ IDEA / VS Code |
+| Tooling | Maven · Docker · Git & GitHub · IntelliJ IDEA / VS Code |
 
 ## Repository Layout
 
@@ -61,9 +61,11 @@ ThinkStack solves all of this in one place — no juggling multiple comparison w
 │       ├── db/migration/     # Flyway SQL migrations + seed data
 │       └── application.yml   # Environment-driven configuration
 ├── docs/                     # Product & engineering documentation
-├── frontend/                 # Next.js application (in progress)
+├── frontend/                 # React + Vite application
+├── scripts/
+│   └── smoke-test.sh         # End-to-end smoke test (docker-compose stack)
 ├── .env.example              # Environment variable template
-└── docker-compose.yml        # Local PostgreSQL
+└── docker-compose.yml        # Full local stack: Postgres + backend + frontend
 ```
 
 ## Getting Started
@@ -102,6 +104,58 @@ cd frontend
 npm install
 npm run dev                     # http://localhost:3000
 ```
+
+### Option B — Full stack with Docker
+
+```bash
+docker compose up -d --build     # Postgres + backend (8080) + frontend via nginx (3000)
+```
+
+The frontend container serves the built SPA and proxies `/api/` to the backend, so
+everything works from `http://localhost:3000`.
+
+## Running the tests
+
+Backend unit tests for the decision engine are DB-free and run instantly:
+
+```bash
+cd backend
+mvn test -Dtest=RecommendationEngineTest -DfailIfNoTests=false
+```
+
+Frontend typecheck + lint + build:
+
+```bash
+cd frontend
+npx tsc -b && npm run lint && npm run build
+```
+
+## End-to-end smoke test
+
+Brings up the docker-compose stack and drives the core flow over HTTP
+(register → login → session → answers → recommendations → summary → price history):
+
+```bash
+./scripts/smoke-test.sh          # requires docker + curl + jq
+```
+
+## AI decision summary
+
+`GET /api/v1/decisions/{id}/summary` returns a concise summary of the top recommendation.
+It is **fabrication-safe**: it only reuses already-computed scores/explainability.
+
+- Default: a deterministic local summariser (no external calls).
+- Optional: set `ai.enabled=true` and `AI_API_KEY` to use an OpenAI model; a fabrication-safe
+  prompt keeps it grounded in the provided facts and falls back to the local summariser on failure.
+
+```bash
+AI_ENABLED=true AI_API_KEY=sk-...  # optional; leave unset for the local summariser
+```
+
+## CI
+
+See [docs/ci.yml](docs/ci.yml). Copy it to `.github/workflows/ci.yml` and push to activate
+(requires a GitHub token with `workflow` scope).
 
 ## Configuration
 
