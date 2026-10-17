@@ -11,6 +11,9 @@ import DecisionDetail from './pages/DecisionDetail'
 import Profile from './pages/Profile'
 import Bookmarks from './pages/Bookmarks'
 import Journal from './pages/Journal'
+import Products from './pages/Products'
+import ProductDetail from './pages/ProductDetail'
+import Notifications from './pages/Notifications'
 import './App.css'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -47,6 +50,12 @@ function App() {
           <Route
             path="/decisions/:sessionId/compare"
             element={<ProtectedRoute><Compare /></ProtectedRoute>}
+          />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:slug" element={<ProductDetail />} />
+          <Route
+            path="/notifications"
+            element={<ProtectedRoute><Notifications /></ProtectedRoute>}
           />
           <Route
             path="/profile"

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../api/client'
-import type { Wizard, WizardQuestion } from '../api/types'
+import type { Wizard } from '../api/types'
 
 export default function Wizard() {
   const { sessionId } = useParams<{ sessionId: string }>()

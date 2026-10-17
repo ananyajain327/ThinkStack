@@ -60,6 +60,8 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link to="/dashboard" className="text-xl font-bold text-indigo-600">ThinkStack</Link>
           <div className="flex items-center gap-4">
+            <Link to="/products" className="text-sm text-gray-600 hover:text-gray-900">Products</Link>
+            <Link to="/notifications" className="text-sm text-gray-600 hover:text-gray-900">Notifications</Link>
             <Link to="/profile" className="text-sm text-gray-600 hover:text-gray-900">Profile</Link>
             <Link to="/bookmarks" className="text-sm text-gray-600 hover:text-gray-900">Bookmarks</Link>
             <Link to="/journal" className="text-sm text-gray-600 hover:text-gray-900">Journal</Link>
