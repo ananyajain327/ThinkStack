@@ -37,7 +37,7 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] Price charts (Recharts) on product detail
 - [x] Containerized backend (Dockerfile) + frontend (Dockerfile + nginx) + `docker-compose.yml`
 - [ ] Decision-engine unit tests (`PrismDD` decision-validity tests) — blocked on CI Postgres
-- [x] CI lint workflow (frontend `tsc`/`oxlint`, backend `mvn -q compile`)
+- [~] CI lint workflow — `.github/workflows/ci.yml` authored locally (frontend `tsc`/`oxlint`/build, backend `mvn compile`); **not yet pushed** because the current GitHub token lacks `workflow` scope
 - [ ] AI summarization (only where it adds trust, never fabricates)
 - [ ] End-to-end smoke test against a live stack
 
