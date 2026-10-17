@@ -2,6 +2,7 @@ package com.thinkstack.controller;
 
 import com.thinkstack.dto.request.AnswerSubmissionRequest;
 import com.thinkstack.dto.request.StartSessionRequest;
+import com.thinkstack.dto.request.UpdateDecisionStatusRequest;
 import com.thinkstack.dto.response.ApiResponse;
 import com.thinkstack.dto.response.ComparisonResponse;
 import com.thinkstack.dto.response.DecisionSessionResponse;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -97,5 +99,13 @@ public class DecisionController {
     @GetMapping("/{sessionId}/summary")
     public ApiResponse<com.thinkstack.dto.response.DecisionSummaryResponse> getSummary(@PathVariable UUID sessionId) {
         return ApiResponse.ok("Decision summary", aiService.generateDecisionSummary(sessionId));
+    }
+
+    @PatchMapping("/{sessionId}/status")
+    public ApiResponse<DecisionSessionResponse> updateStatus(
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody UpdateDecisionStatusRequest request) {
+        return ApiResponse.ok("Decision status updated",
+                decisionService.updateStatus(sessionId, request.getStatus()));
     }
 }

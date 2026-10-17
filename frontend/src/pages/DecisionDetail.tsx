@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { apiErrorMessage } from '../api/client'
-import { get, post } from '../api/rest'
+import { get, patch, post } from '../api/rest'
 import { useAsync } from '../hooks/useAsync'
 import { useToast } from '../components/Toast'
 import type { DecisionSession, DecisionSummary } from '../api/types'
@@ -22,9 +22,11 @@ import {
   IconChart,
   IconCheck,
   IconCompass,
+  IconRefresh,
   IconScale,
   IconSparkles,
   IconTarget,
+  IconX,
 } from '../components/icons'
 
 export default function DecisionDetail() {
@@ -34,6 +36,7 @@ export default function DecisionDetail() {
   const [summary, setSummary] = useState<DecisionSummary | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
+  const [statusBusy, setStatusBusy] = useState(false)
 
   if (session.loading) return <PageLoader label="Loading decision…" />
   if (session.error || !session.data) {
@@ -47,7 +50,23 @@ export default function DecisionDetail() {
   }
 
   const s = session.data
-  const hasRecommendations = s.status === 'COMPLETED' || s.status === 'PURCHASED'
+  const hasRecommendations = ['COMPLETED', 'PURCHASED', 'ARCHIVED'].includes(s.status)
+
+  const statusLabel = (st: string) =>
+    st.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase())
+
+  const updateStatus = async (status: string) => {
+    setStatusBusy(true)
+    try {
+      const updated = await patch<DecisionSession>(`/decisions/${sessionId}/status`, { status })
+      session.setData(updated)
+      toast.success(`Marked as ${statusLabel(status)}`)
+    } catch (err) {
+      toast.error('Could not update status', apiErrorMessage(err))
+    } finally {
+      setStatusBusy(false)
+    }
+  }
 
   const loadSummary = async () => {
     setSummaryLoading(true)
@@ -121,6 +140,30 @@ export default function DecisionDetail() {
           subtitle="Side-by-side trade-offs"
         />
       </div>
+
+      <Card className="p-5 sm:p-6">
+        <SectionHeading
+          title="Manage decision"
+          subtitle="Track what you actually did with this decision."
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {s.status !== 'PURCHASED' && s.status !== 'ARCHIVED' && (
+            <Button onClick={() => updateStatus('PURCHASED')} disabled={statusBusy}>
+              <IconCheck className="h-4 w-4" /> Mark as purchased
+            </Button>
+          )}
+          {s.status !== 'ARCHIVED' && (
+            <Button variant="outline" onClick={() => updateStatus('ARCHIVED')} disabled={statusBusy}>
+              <IconX className="h-4 w-4" /> Archive
+            </Button>
+          )}
+          {(s.status === 'ARCHIVED' || s.status === 'PURCHASED') && (
+            <Button variant="outline" onClick={() => updateStatus('COMPLETED')} disabled={statusBusy}>
+              <IconRefresh className="h-4 w-4" /> Reopen
+            </Button>
+          )}
+        </div>
+      </Card>
 
       {hasRecommendations && (
         <Card className="p-5 sm:p-6">

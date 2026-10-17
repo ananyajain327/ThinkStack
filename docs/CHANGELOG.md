@@ -5,6 +5,12 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Added
+- **Decision lifecycle transitions**: `PATCH /api/v1/decisions/{id}/status` with validated
+  `IN_PROGRESS | COMPLETED | PURCHASED | ARCHIVED` transitions (ownership-enforced);
+  Decision Detail page gains **Mark purchased / Archive / Reopen** actions.
+- **Frontend design system**: shared UI kit, icon set, toast system, responsive `AppShell`,
+  Tailwind v4 `@theme` tokens; full page rewrite (Landing/Dashboard/Wizard/Recommendations/
+  Compare/Products/ProductDetail/Profile/Bookmarks/Journal/Notifications) + new Price Alerts page.
 - **Dashboard feed (Phase 3f)**: `GET /api/v1/feed` — unified chronological
   activity feed across decision sessions, price alerts and notifications
   (401 without token, newest-first, `?limit=` 5..100)
@@ -73,6 +79,13 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ### Removed / corrected
 - Removed obsolete entities/repositories that did not match migrations
   (`Decision`, `Review`, `ProductComparison`, `ComparisonItem`, and their repos).
+
+### Fixed
+- Restored `backend/src/main/resources/application.yml` after it had been truncated to only the
+  `ai:` block — server, datasource, JPA, Flyway, Jackson and `thinkstack.jwt` configuration are back
+  (the app could not start without the JWT + datasource settings).
+- Corrected frontend DTO field mismatches (product specs/reviews, comparison rows/sellers) and
+  moved user preferences to `/me/preferences`.
 
 ## [0.1.0] - 2026-09
 - Initial repo baseline and foundation (see Added above).

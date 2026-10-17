@@ -41,6 +41,7 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] Decision-engine unit tests (`RecommendationEngineTest`, 12 decision-validity tests, DB-free)
 - [x] CI config authored & versioned at `docs/ci.yml` (backend compile + engine unit tests, frontend `tsc`/`oxlint`/build). **Not yet active** — copy to `.github/workflows/ci.yml` and push once the GitHub token has `workflow` scope (header in the file explains how).
 - [x] AI summarization — provider-agnostic `AiService`; optional OpenAI-backed (`ai.enabled=true` + `AI_API_KEY`) with fabrication-safe prompt, deterministic local fallback summariser; `GET /decisions/{id}/summary` + frontend "Summarize" card
+- [x] Decision lifecycle transitions — `PATCH /decisions/{id}/status` (`IN_PROGRESS`/`COMPLETED`/`PURCHASED`/`ARCHIVED`, ownership-enforced) + Decision Detail purchase/archive/reopen actions
 - [x] End-to-end smoke test — `scripts/smoke-test.sh` (brings up docker-compose, runs register→login→session→answers→recommendations→summary→price-history); needs Docker to execute
 
 ## Done (Phase 0 & foundation)

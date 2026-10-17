@@ -177,6 +177,16 @@ Retrieve explainable recommendation cards for a decision session.
 #### `GET /api/decisions/{id}`
 Retrieve full decision details, answers, selected alternatives, and recommendations.
 
+#### `PATCH /api/decisions/{id}/status`
+Advance or reopen a decision session's lifecycle state.
+- **Request Body**:
+  ```json
+  { "status": "PURCHASED" }
+  ```
+  Allowed values: `IN_PROGRESS`, `COMPLETED`, `PURCHASED`, `ARCHIVED`.
+- **Response**: `200 OK` with the updated `decision_session` object. Ownership is enforced;
+  invalid statuses return `400`.
+
 ---
 
 ### 💰 3.6 Pricing & History (`/api/prices`)

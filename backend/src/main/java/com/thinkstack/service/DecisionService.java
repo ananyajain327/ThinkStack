@@ -58,6 +58,9 @@ public class DecisionService {
 
     private static final BigDecimal FIVE = BigDecimal.valueOf(5);
 
+    private static final Set<String> ALLOWED_STATUSES =
+            Set.of("IN_PROGRESS", "COMPLETED", "PURCHASED", "ARCHIVED");
+
     private final DecisionSessionRepository sessionRepository;
     private final DecisionWizardRepository wizardRepository;
     private final WizardQuestionRepository questionRepository;
@@ -159,6 +162,17 @@ public class DecisionService {
     @Transactional(readOnly = true)
     public DecisionSessionResponse getSession(UUID sessionId) {
         return toResponse(requireOwned(sessionId));
+    }
+
+    @Transactional
+    public DecisionSessionResponse updateStatus(UUID sessionId, String status) {
+        DecisionSession session = requireOwned(sessionId);
+        if (status == null || !ALLOWED_STATUSES.contains(status)) {
+            throw new ThinkStackException(
+                    "Invalid status. Allowed: " + ALLOWED_STATUSES, "BAD_REQUEST");
+        }
+        session.setStatus(status);
+        return toResponse(sessionRepository.save(session));
     }
 
     // ---------- recommendations ----------
