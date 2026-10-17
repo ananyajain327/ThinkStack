@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 import api from '../api/client'
 import type { ProductSummary, PriceResponse } from '../api/types'
 
@@ -26,11 +35,20 @@ interface ProductDetail extends ProductSummary {
   reviews: Review[]
 }
 
+interface PricePoint {
+  id: string
+  sellerName: string
+  price: number
+  currency: string
+  recordedAt: string
+}
+
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'specs' | 'prices' | 'reviews'>('specs')
+  const [tab, setTab] = useState<'specs' | 'prices' | 'history' | 'reviews'>('specs')
+  const [history, setHistory] = useState<PricePoint[]>([])
 
   useEffect(() => {
     if (!slug) return
@@ -38,6 +56,9 @@ export default function ProductDetail() {
       .then(res => setProduct(res.data.data))
       .catch(() => setProduct(null))
       .finally(() => setLoading(false))
+    api.get(`/products/${slug}/price-history`)
+      .then(res => setHistory(res.data.data || []))
+      .catch(() => setHistory([]))
   }, [slug])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -87,7 +108,7 @@ export default function ProductDetail() {
         </div>
 
         <div className="flex gap-2 mb-6">
-          {(['specs', 'prices', 'reviews'] as const).map(t => (
+          {(['specs', 'prices', 'history', 'reviews'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -95,7 +116,7 @@ export default function ProductDetail() {
                 tab === t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'
               }`}
             >
-              {t === 'specs' ? 'Specifications' : t === 'prices' ? 'Prices' : `Reviews (${product.reviews.length})`}
+              {t === 'specs' ? 'Specifications' : t === 'prices' ? 'Prices' : t === 'history' ? 'Price History' : `Reviews (${product.reviews.length})`}
             </button>
           ))}
         </div>
@@ -147,6 +168,36 @@ export default function ProductDetail() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {tab === 'history' && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Price trend</h3>
+            {history.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No price history available.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={[...history].sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                  <XAxis
+                    dataKey="recordedAt"
+                    tickFormatter={(v) => new Date(v).toLocaleDateString()}
+                    fontSize={12}
+                  />
+                  <YAxis
+                    fontSize={12}
+                    tickFormatter={(v) => v.toLocaleString()}
+                    domain={['auto', 'auto']}
+                  />
+                  <Tooltip
+                    labelFormatter={(v) => new Date(v).toLocaleString()}
+                    formatter={(v) => [Number(v).toLocaleString(), 'Price']}
+                  />
+                  <Line type="monotone" dataKey="price" stroke="#4f46e5" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         )}
 
