@@ -59,13 +59,13 @@ public class JwtService {
                               String type, long expirationMs) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .setSubject(userId.toString())
+                .subject(userId.toString())
                 .claim(CLAIM_USERNAME, username)
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_ROLE, role)
                 .claim(CLAIM_TYPE, type)
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plusMillis(expirationMs)))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusMillis(expirationMs)))
                 .signWith(key)
                 .compact();
     }
@@ -114,11 +114,11 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(key)
+            return Jwts.parser()
+                    .verifyWith(key)
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseSignedClaims(token)
+                    .getPayload();
         } catch (Exception ex) {
             throw new ThinkStackException("Invalid or expired token", "INVALID_TOKEN");
         }

@@ -1,36 +1,56 @@
-
-  port: 8080
+server:
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
-    name: thinkstack-backend
+    name: thinkstack-api
+
+  profiles:
+    active: dev
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/thinkstack
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:thinkstack}
+    username: ${DB_USERNAME:thinkstack}
+    password: ${DB_PASSWORD:thinkstack_dev_2024}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+
   jpa:
     hibernate:
       ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: false
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 25
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
 
-jwt:
-  secret: your_jwt_secret_key_change_in_production_thinkstack_secure_key_32_chars
-  expiration: 86400000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
-app:
-  cors:
-    allowed-origins: http://localhost:5173,http://localhost:3000
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+thinkstack:
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-long-random-secret-at-least-32-characters-long-enough-for-hs256}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 
 logging:
   level:
-    com.thinkstack: DEBUG
-    org.hibernate.SQL: DEBUG
+    com.thinkstack: INFO
+    org.springframework.security: WARN
