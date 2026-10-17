@@ -8,6 +8,9 @@ import Wizard from './pages/Wizard'
 import Recommendations from './pages/Recommendations'
 import Compare from './pages/Compare'
 import DecisionDetail from './pages/DecisionDetail'
+import Profile from './pages/Profile'
+import Bookmarks from './pages/Bookmarks'
+import Journal from './pages/Journal'
 import './App.css'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -44,6 +47,18 @@ function App() {
           <Route
             path="/decisions/:sessionId/compare"
             element={<ProtectedRoute><Compare /></ProtectedRoute>}
+          />
+          <Route
+            path="/profile"
+            element={<ProtectedRoute><Profile /></ProtectedRoute>}
+          />
+          <Route
+            path="/bookmarks"
+            element={<ProtectedRoute><Bookmarks /></ProtectedRoute>}
+          />
+          <Route
+            path="/journal"
+            element={<ProtectedRoute><Journal /></ProtectedRoute>}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
