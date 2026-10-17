@@ -27,9 +27,11 @@ import java.util.UUID;
 public class DecisionController {
 
     private final DecisionService decisionService;
+    private final com.thinkstack.service.AiService aiService;
 
-    public DecisionController(DecisionService decisionService) {
+    public DecisionController(DecisionService decisionService, com.thinkstack.service.AiService aiService) {
         this.decisionService = decisionService;
+        this.aiService = aiService;
     }
 
     @PostMapping
@@ -90,5 +92,10 @@ public class DecisionController {
                                                @PathVariable UUID productId) {
         decisionService.removeAlternative(sessionId, productId);
         return ApiResponse.ok(null);
+    }
+
+    @GetMapping("/{sessionId}/summary")
+    public ApiResponse<com.thinkstack.dto.response.DecisionSummaryResponse> getSummary(@PathVariable UUID sessionId) {
+        return ApiResponse.ok("Decision summary", aiService.generateDecisionSummary(sessionId));
     }
 }

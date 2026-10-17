@@ -69,6 +69,17 @@ export interface DecisionSession {
   answers: DecisionAnswer[]
 }
 
+export interface DecisionSummary {
+  sessionTitle: string
+  category: string
+  recommendationCount: number
+  topRecommendation: string | null
+  keyReasons: string[]
+  caveats: string[]
+  aiGenerated: boolean
+  generatedAt: string
+}
+
 export interface ProductSummary {
   id: string
   name: string

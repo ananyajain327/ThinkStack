@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import api from '../api/client'
-import type { DecisionSession } from '../api/types'
+import type { DecisionSession, DecisionSummary } from '../api/types'
 
 export default function DecisionDetail() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const [session, setSession] = useState<DecisionSession | null>(null)
   const [loading, setLoading] = useState(true)
+  const [summary, setSummary] = useState<DecisionSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -15,6 +17,15 @@ export default function DecisionDetail() {
       .catch(() => setSession(null))
       .finally(() => setLoading(false))
   }, [sessionId])
+
+  const loadSummary = () => {
+    if (!sessionId) return
+    setSummaryLoading(true)
+    api.get(`/decisions/${sessionId}/summary`)
+      .then(res => setSummary(res.data.data))
+      .catch(() => setSummary(null))
+      .finally(() => setSummaryLoading(false))
+  }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   if (!session) return <div className="min-h-screen flex items-center justify-center text-gray-500">Decision not found</div>
@@ -80,6 +91,56 @@ export default function DecisionDetail() {
             <p className="mt-1 text-sm text-gray-600">Side-by-side view</p>
           </Link>
         </div>
+
+        {session.status === 'COMPLETED' && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Decision Summary</h2>
+                {summary && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    {summary.aiGenerated ? 'AI-generated from your scores.' : 'Generated from your scores.'}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={loadSummary}
+                disabled={summaryLoading}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {summaryLoading ? 'Summarizing...' : summary ? 'Refresh' : 'Summarize'}
+              </button>
+            </div>
+            {summary && (
+              <div className="mt-4">
+                {summary.topRecommendation && (
+                  <p className="text-sm text-gray-700 mb-2">
+                    Top pick: <span className="font-medium">{summary.topRecommendation}</span>
+                    {' '}across {summary.recommendationCount} options.
+                  </p>
+                )}
+                {summary.keyReasons.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {summary.keyReasons.map((r, i) => (
+                      <li key={i} className="text-sm text-gray-700 flex gap-2">
+                        <span className="text-green-600">+</span> {r}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {summary.caveats.length > 0 && (
+                  <ul className="mt-3 space-y-1">
+                    {summary.caveats.map((c, i) => (
+                      <li key={i} className="text-sm text-gray-700 flex gap-2">
+                        <span className="text-amber-600">!</span> {c}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {session.answers.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-6">
