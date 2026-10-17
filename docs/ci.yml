@@ -1,0 +1,59 @@
+# ThinkStack CI pipeline (GitHub Actions)
+#
+# STATUS: This file lives in docs/ (not .github/workflows/) because the current GitHub
+# token lacks the `workflow` scope, so it cannot create workflow files directly.
+#
+# TO ACTIVATE:
+#   1. Copy this file to .github/workflows/ci.yml
+#      `mkdir -p .github/workflows && cp docs/ci.yml .github/workflows/ci.yml`
+#   2. Commit and push (requires a token with `workflow` scope).
+# It will then run on every push/PR to main.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend compile + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Compile
+        working-directory: backend
+        run: mvn -B -q compile
+      - name: Unit tests (decision engine, DB-free)
+        working-directory: backend
+        run: mvn -B test -Dtest=RecommendationEngineTest -DfailIfNoTests=false
+
+  frontend:
+    name: Frontend typecheck, lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc -b
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Build
+        working-directory: frontend
+        run: npm run build

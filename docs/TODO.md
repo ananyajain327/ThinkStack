@@ -37,7 +37,7 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 - [x] Price charts (Recharts) on product detail
 - [x] Containerized backend (Dockerfile) + frontend (Dockerfile + nginx) + `docker-compose.yml`
 - [x] Decision-engine unit tests (`RecommendationEngineTest`, 12 decision-validity tests, DB-free)
-- [~] CI lint workflow — `.github/workflows/ci.yml` authored locally (frontend `tsc`/`oxlint`/build, backend `mvn compile` + engine unit tests); **not yet pushed** because the current GitHub token lacks `workflow` scope
+- [x] CI config authored & versioned at `docs/ci.yml` (backend compile + engine unit tests, frontend `tsc`/`oxlint`/build). **Not yet active** — copy to `.github/workflows/ci.yml` and push once the GitHub token has `workflow` scope (header in the file explains how).
 - [x] AI summarization — provider-agnostic `AiService`; optional OpenAI-backed (`ai.enabled=true` + `AI_API_KEY`) with fabrication-safe prompt, deterministic local fallback summariser; `GET /decisions/{id}/summary` + frontend "Summarize" card
 - [x] End-to-end smoke test — `scripts/smoke-test.sh` (brings up docker-compose, runs register→login→session→answers→recommendations→summary→price-history); needs Docker to execute
 
