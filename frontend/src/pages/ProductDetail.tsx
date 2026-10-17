@@ -1,237 +1,335 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from 'recharts'
-import api from '../api/client'
-import type { ProductSummary, PriceResponse } from '../api/types'
-
-interface SpecValue {
-  specName: string
-  specValue: string
-  specUnit?: string
-  specGroup?: string
-}
-
-interface Review {
-  id: string
-  sourceName?: string
-  rating?: number
-  title?: string
-  reviewText?: string
-  reviewType?: string
-}
-
-interface ProductDetail extends ProductSummary {
-  description?: string
-  specifications: SpecValue[]
-  prices: PriceResponse[]
-  reviews: Review[]
-}
-
-interface PricePoint {
-  id: string
-  sellerName: string
-  price: number
-  currency: string
-  recordedAt: string
-}
+import { apiErrorMessage } from '../api/client'
+import { get, post } from '../api/rest'
+import { useAsync } from '../hooks/useAsync'
+import { useToast } from '../components/Toast'
+import type { PriceHistoryPoint, ProductDetail as ProductDetailModel, ReviewResponse } from '../api/types'
+import { formatCurrency, formatDate } from '../lib/format'
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Modal,
+  PageLoader,
+  ProductImage,
+  Stars,
+  Tabs,
+} from '../components/ui'
+import {
+  IconArrowLeft,
+  IconBell,
+  IconBookmark,
+  IconExternal,
+  IconTarget,
+  IconThumbsUp,
+} from '../components/icons'
 
 export default function ProductDetail() {
-  const { slug } = useParams<{ slug: string }>()
-  const [product, setProduct] = useState<ProductDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { slug = '' } = useParams<{ slug: string }>()
+  const toast = useToast()
+  const product = useAsync(() => get<ProductDetailModel>(`/products/${slug}`), [slug])
+  const history = useAsync(() => get<PriceHistoryPoint[]>(`/products/${slug}/price-history`), [slug])
+
   const [tab, setTab] = useState<'specs' | 'prices' | 'history' | 'reviews'>('specs')
-  const [history, setHistory] = useState<PricePoint[]>([])
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [targetPrice, setTargetPrice] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
 
-  useEffect(() => {
-    if (!slug) return
-    api.get(`/products/${slug}`)
-      .then(res => setProduct(res.data.data))
-      .catch(() => setProduct(null))
-      .finally(() => setLoading(false))
-    api.get(`/products/${slug}/price-history`)
-      .then(res => setHistory(res.data.data || []))
-      .catch(() => setHistory([]))
-  }, [slug])
+  if (product.loading) return <PageLoader label="Loading product…" />
+  if (product.error || !product.data) {
+    return (
+      <EmptyState
+        title="Product not found"
+        description={product.error ?? 'This product may have been removed.'}
+        action={<Link to="/products"><Button>Back to products</Button></Link>}
+      />
+    )
+  }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  if (!product) return <div className="min-h-screen flex items-center justify-center text-gray-500">Product not found</div>
+  const p = product.data
+  const points = [...(history.data ?? [])].sort(
+    (a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()
+  )
+  const prices = points.map((pt) => pt.price)
+  const min = prices.length ? Math.min(...prices) : undefined
+  const max = prices.length ? Math.max(...prices) : undefined
+  const sentimentTone = (s?: string) => (s === 'POSITIVE' ? 'emerald' : s === 'NEGATIVE' ? 'rose' : 'slate')
 
-  const specGroups = product.specifications.reduce<Record<string, SpecValue[]>>((acc, spec) => {
-    const group = spec.specGroup || 'General'
-    if (!acc[group]) acc[group] = []
-    acc[group].push(spec)
-    return acc
-  }, {})
+  const openAlert = () => {
+    setTargetPrice(p.bestPrice ? String(Math.round(p.bestPrice * 0.9)) : '')
+    setAlertOpen(true)
+  }
+
+  const createAlert = async () => {
+    const value = Number(targetPrice)
+    if (!value || value <= 0) {
+      toast.error('Enter a valid target price')
+      return
+    }
+    setSaving(true)
+    try {
+      await post('/price-alerts', { productId: p.id, targetPrice: value })
+      setAlertOpen(false)
+      toast.success('Price alert created', `We will notify you when it drops to ${formatCurrency(value, p.currency)}`)
+    } catch (err) {
+      toast.error('Could not create alert', apiErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const bookmark = async () => {
+    try {
+      await post('/bookmarks', { bookmarkType: 'PRODUCT', productId: p.id })
+      setBookmarked(true)
+      toast.success('Saved to bookmarks')
+    } catch (err) {
+      const msg = apiErrorMessage(err)
+      if (msg.toLowerCase().includes('already')) {
+        setBookmarked(true)
+        toast.info('Already bookmarked')
+      } else {
+        toast.error('Could not bookmark', msg)
+      }
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <Link to="/dashboard" className="text-xl font-bold text-indigo-600">ThinkStack</Link>
-        </div>
-      </nav>
+    <div className="space-y-6">
+      <Link to="/products" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+        <IconArrowLeft className="h-4 w-4" /> Back to products
+      </Link>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white p-8 rounded-xl border border-gray-200 mb-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm text-gray-500">{product.categoryName}</p>
-              <h1 className="text-2xl font-bold text-gray-900 mt-1">{product.name}</h1>
-              <p className="mt-1 text-gray-600">{product.brand} {product.model}</p>
-              {product.avgRating != null && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-yellow-400">★</span>
-                  <span className="font-medium">{product.avgRating.toFixed(1)}</span>
-                  <span className="text-gray-500 text-sm">({product.reviewCount} reviews)</span>
-                </div>
-              )}
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-col gap-6 sm:flex-row">
+          <ProductImage src={p.imageUrl} alt={p.name} className="h-44 w-full shrink-0 sm:w-56" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-slate-500">{p.categoryName}</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{p.name}</h1>
+            <p className="mt-1 text-slate-600">
+              {p.brand}
+              {p.model ? ` · ${p.model}` : ''}
+            </p>
+            <div className="mt-2">
+              <Stars value={p.avgRating} count={p.reviewCount} />
             </div>
-            <div className="text-right">
-              {product.bestPrice != null && (
-                <div className="text-2xl font-bold text-gray-900">
-                  {product.currency} {product.bestPrice.toLocaleString()}
+            {p.description && <p className="mt-4 text-sm leading-relaxed text-slate-600">{p.description}</p>}
+
+            <div className="mt-5 flex flex-wrap items-end gap-4">
+              {p.bestPrice != null && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Best price</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(p.bestPrice, p.currency)}</p>
                 </div>
               )}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="subtle" size="sm" onClick={openAlert}>
+                  <IconBell className="h-4 w-4" /> Set price alert
+                </Button>
+                <Button variant={bookmarked ? 'ghost' : 'outline'} size="sm" onClick={bookmark} disabled={bookmarked}>
+                  <IconBookmark className="h-4 w-4" /> {bookmarked ? 'Saved' : 'Save'}
+                </Button>
+              </div>
             </div>
           </div>
-          {product.description && (
-            <p className="mt-4 text-gray-700">{product.description}</p>
+        </div>
+      </Card>
+
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: 'specs', label: 'Specifications', count: p.specifications.length },
+          { value: 'prices', label: 'Prices', count: p.prices.length },
+          { value: 'history', label: 'Price history', count: points.length },
+          { value: 'reviews', label: 'Reviews', count: p.reviews.length },
+        ]}
+        className="max-w-2xl"
+      />
+
+      {tab === 'specs' && (
+        <Card className="divide-y divide-slate-100">
+          {p.specifications.length === 0 ? (
+            <p className="p-6 text-sm text-slate-500">No specifications available.</p>
+          ) : (
+            p.specifications.map((spec) => (
+              <div key={spec.specDefId} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-slate-700">{spec.name}</span>
+                  {spec.explanation && <p className="mt-0.5 max-w-xl text-xs text-slate-400">{spec.explanation}</p>}
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-slate-900">
+                  {spec.displayValue ?? spec.textValue ?? (spec.numericValue != null ? `${spec.numericValue}${spec.unit ? ` ${spec.unit}` : ''}` : '—')}
+                </span>
+              </div>
+            ))
+          )}
+        </Card>
+      )}
+
+      {tab === 'prices' && (
+        <div className="space-y-3">
+          {p.prices.length === 0 ? (
+            <EmptyState title="No prices available" description="We could not find sellers for this product." />
+          ) : (
+            p.prices.map((seller) => (
+            <Card key={seller.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-900">{seller.sellerName}</p>
+                <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                  {seller.availability && <span>{seller.availability}</span>}
+                  {seller.deliveryInformation && <span>· {seller.deliveryInformation}</span>}
+                  {seller.warrantyInformation && <span>· {seller.warrantyInformation}</span>}
+                  {seller.sellerRating != null && (
+                    <span className="inline-flex items-center gap-1">
+                      <IconThumbsUp className="h-3 w-3" /> {seller.sellerRating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-right">
+                  {seller.discountPercentage ? (
+                    <Badge tone="emerald">-{Math.round(seller.discountPercentage)}%</Badge>
+                  ) : null}
+                  <span className="block text-lg font-bold text-slate-900">{formatCurrency(seller.price, seller.currency)}</span>
+                </span>
+                {seller.sellerUrl && (
+                  <a href={seller.sellerUrl} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="outline">
+                      Visit <IconExternal className="h-3.5 w-3.5" />
+                    </Button>
+                  </a>
+                )}
+              </div>
+            </Card>
+          ))
           )}
         </div>
+      )}
 
-        <div className="flex gap-2 mb-6">
-          {(['specs', 'prices', 'history', 'reviews'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm ${
-                tab === t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'
-              }`}
-            >
-              {t === 'specs' ? 'Specifications' : t === 'prices' ? 'Prices' : t === 'history' ? 'Price History' : `Reviews (${product.reviews.length})`}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'specs' && (
-          <div className="space-y-6">
-            {Object.entries(specGroups).map(([group, specs]) => (
-              <div key={group} className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">{group}</h3>
-                <div className="divide-y divide-gray-100">
-                  {specs.map((spec, i) => (
-                    <div key={i} className="flex justify-between py-2">
-                      <span className="text-gray-600">{spec.specName}</span>
-                      <span className="font-medium text-gray-900">
-                        {spec.specValue}{spec.specUnit ? ` ${spec.specUnit}` : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+      {tab === 'history' && (
+        <Card className="p-5 sm:p-6">
+          {points.length === 0 ? (
+            <EmptyState title="No price history" description="Price tracking data is not available for this product yet." />
+          ) : (
+            <>
+              <div className="mb-4 flex flex-wrap gap-6 text-sm">
+                <span className="text-slate-500">Lowest <span className="font-semibold text-emerald-600">{formatCurrency(min, p.currency)}</span></span>
+                <span className="text-slate-500">Highest <span className="font-semibold text-rose-600">{formatCurrency(max, p.currency)}</span></span>
               </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'prices' && (
-          <div className="space-y-3">
-            {product.prices.map((price) => (
-              <div key={price.id} className="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-gray-900">{price.sellerName}</p>
-                  {price.availability && <p className="text-sm text-gray-500">{price.availability}</p>}
-                  {price.deliveryInformation && <p className="text-sm text-gray-500">{price.deliveryInformation}</p>}
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-gray-900">
-                    {price.currency} {price.price.toLocaleString()}
-                  </div>
-                  {price.discountPercentage && (
-                    <div className="text-sm text-green-600">-{price.discountPercentage.toFixed(0)}%</div>
-                  )}
-                  <a
-                    href={price.sellerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-block text-sm text-indigo-600 hover:text-indigo-800"
-                  >
-                    View →
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {tab === 'history' && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Price trend</h3>
-            {history.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No price history available.</p>
-            ) : (
               <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={[...history].sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <LineChart data={points}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
                   <XAxis
                     dataKey="recordedAt"
-                    tickFormatter={(v) => new Date(v).toLocaleDateString()}
+                    tickFormatter={(v) => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     fontSize={12}
+                    stroke="#94a3b8"
                   />
                   <YAxis
                     fontSize={12}
-                    tickFormatter={(v) => v.toLocaleString()}
+                    stroke="#94a3b8"
+                    tickFormatter={(v) => Number(v).toLocaleString()}
                     domain={['auto', 'auto']}
+                    width={70}
                   />
                   <Tooltip
-                    labelFormatter={(v) => new Date(v).toLocaleString()}
-                    formatter={(v) => [Number(v).toLocaleString(), 'Price']}
+                    labelFormatter={(v) => formatDate(String(v))}
+                    formatter={(v) => [formatCurrency(Number(v), p.currency), 'Price']}
                   />
-                  <Line type="monotone" dataKey="price" stroke="#4f46e5" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="price" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </Card>
+      )}
 
-        {tab === 'reviews' && (
-          <div className="space-y-4">
-            {product.reviews.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No reviews yet.</p>
-            ) : (
-              product.reviews.map((review) => (
-                <div key={review.id} className="bg-white p-6 rounded-xl border border-gray-200">
-                  <div className="flex justify-between">
-                    <div>
-                      {review.title && <h4 className="font-semibold text-gray-900">{review.title}</h4>}
-                      <p className="text-sm text-gray-500 mt-1">
-                        {review.sourceName} · {review.reviewType}
-                      </p>
-                    </div>
-                    {review.rating != null && (
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <span key={i} className={i <= review.rating! ? 'text-yellow-400' : 'text-gray-300'}>★</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {review.reviewText && (
-                    <p className="mt-3 text-sm text-gray-700">{review.reviewText}</p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+      {tab === 'reviews' && (
+        <div className="space-y-4">
+          {p.reviews.length === 0 ? (
+            <EmptyState title="No reviews yet" description="Be the first to share your experience." />
+          ) : (
+            p.reviews.map((review) => <ReviewCard key={review.id} review={review} toneFn={sentimentTone} />)
+          )}
+        </div>
+      )}
+
+      <Modal
+        open={alertOpen}
+        onClose={() => setAlertOpen(false)}
+        title="Set a price alert"
+        size="sm"
+      >
+        <p className="text-sm text-slate-500">
+          We&apos;ll notify you when the best price for <span className="font-medium text-slate-700">{p.name}</span> drops to
+          your target.
+        </p>
+        {p.bestPrice != null && (
+          <p className="mt-1 text-sm text-slate-500">
+            Current best: <span className="font-semibold text-slate-800">{formatCurrency(p.bestPrice, p.currency)}</span>
+          </p>
         )}
-      </main>
+        <Field label="Target price" className="mt-4">
+          <input
+            type="number"
+            value={targetPrice}
+            onChange={(e) => setTargetPrice(e.target.value)}
+            placeholder="e.g. 60000"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+          />
+        </Field>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setAlertOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={createAlert} loading={saving}>
+            <IconTarget className="h-4 w-4" /> Create alert
+          </Button>
+        </div>
+      </Modal>
     </div>
+  )
+}
+
+function ReviewCard({ review, toneFn }: { review: ReviewResponse; toneFn: (s?: string) => string }) {
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          {review.title && <h3 className="font-semibold text-slate-900">{review.title}</h3>}
+          <p className="mt-0.5 text-xs text-slate-500">
+            {review.authorName ?? 'Anonymous'}
+            {review.source ? ` · ${review.source}` : ''}
+            {review.verifiedPurchase ? ' · verified' : ''}
+            {review.reviewDate ? ` · ${formatDate(review.reviewDate)}` : ''}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Stars value={review.rating} />
+          {review.sentiment && <Badge tone={toneFn(review.sentiment)}>{review.sentiment.toLowerCase()}</Badge>}
+        </div>
+      </div>
+      {review.content && <p className="mt-3 text-sm leading-relaxed text-slate-600">{review.content}</p>}
+      {review.helpfulCount ? (
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+          <IconThumbsUp className="h-3.5 w-3.5" /> {review.helpfulCount} found this helpful
+        </p>
+      ) : null}
+    </Card>
   )
 }

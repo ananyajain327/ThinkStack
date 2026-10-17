@@ -1,212 +1,180 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import api from '../api/client'
-import type { DecisionSession, Category, FeedItem } from '../api/types'
+import { get } from '../api/rest'
+import { useAsync } from '../hooks/useAsync'
+import type { DecisionSession, FeedItem } from '../api/types'
+import { formatDate, timeAgo, titleCase } from '../lib/format'
+import { cn } from '../lib/cn'
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  PageLoader,
+  SectionHeading,
+  statusTone,
+} from '../components/ui'
+import {
+  IconArrowRight,
+  IconBell,
+  IconBook,
+  IconBookmark,
+  IconCompass,
+  IconGrid,
+  IconSparkles,
+  IconTarget,
+} from '../components/icons'
+
+const feedIcon: Record<string, typeof IconBell> = {
+  DECISION: IconCompass,
+  SESSION: IconCompass,
+  PRICE_DROP: IconTarget,
+  PRICE_ALERT: IconTarget,
+  NOTIFICATION: IconBell,
+  JOURNAL: IconBook,
+  BOOKMARK: IconBookmark,
+  RECOMMENDATION: IconSparkles,
+  PRODUCT: IconGrid,
+}
+
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export default function Dashboard() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [sessions, setSessions] = useState<DecisionSession[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [feed, setFeed] = useState<FeedItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showNew, setShowNew] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
-  const [newCategory, setNewCategory] = useState('')
-  const [creating, setCreating] = useState(false)
+  const { user } = useAuth()
+  const sessions = useAsync(() => get<DecisionSession[]>('/decisions/mine'), [])
+  const feed = useAsync(() => get<FeedItem[]>('/feed', { params: { limit: 8 } }), [])
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/decisions/mine').then(res => setSessions(res.data.data || [])).catch(() => {}),
-      api.get('/categories').then(res => setCategories(res.data.data || [])).catch(() => {}),
-      api.get('/feed').then(res => setFeed(res.data.data || [])).catch(() => {}),
-    ]).finally(() => setLoading(false))
-  }, [])
+  const all = sessions.data ?? []
+  const active = all.filter((s) => s.status === 'IN_PROGRESS' || s.status === 'DRAFT').length
+  const completed = all.filter((s) => s.status === 'COMPLETED' || s.status === 'PURCHASED').length
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
-
-  const handleCreate = async () => {
-    if (!newCategory) return
-    setCreating(true)
-    try {
-      const res = await api.post('/decisions', {
-        categorySlug: newCategory,
-        title: newTitle || undefined,
-      })
-      const session = res.data.data
-      navigate(`/decisions/${session.id}/wizard`)
-    } catch {
-      alert('Failed to create decision')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const statusColor: Record<string, string> = {
-    DRAFT: 'bg-gray-100 text-gray-700',
-    IN_PROGRESS: 'bg-yellow-100 text-yellow-700',
-    COMPLETED: 'bg-green-100 text-green-700',
-    PURCHASED: 'bg-blue-100 text-blue-700',
-    ARCHIVED: 'bg-gray-100 text-gray-500',
-  }
+  const stats = [
+    { label: 'Total decisions', value: all.length, icon: IconCompass, tone: 'text-indigo-600 bg-indigo-50' },
+    { label: 'In progress', value: active, icon: IconTarget, tone: 'text-amber-600 bg-amber-50' },
+    { label: 'Completed', value: completed, icon: IconSparkles, tone: 'text-emerald-600 bg-emerald-50' },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link to="/dashboard" className="text-xl font-bold text-indigo-600">ThinkStack</Link>
-          <div className="flex items-center gap-4">
-            <Link to="/products" className="text-sm text-gray-600 hover:text-gray-900">Products</Link>
-            <Link to="/notifications" className="text-sm text-gray-600 hover:text-gray-900">Notifications</Link>
-            <Link to="/profile" className="text-sm text-gray-600 hover:text-gray-900">Profile</Link>
-            <Link to="/bookmarks" className="text-sm text-gray-600 hover:text-gray-900">Bookmarks</Link>
-            <Link to="/journal" className="text-sm text-gray-600 hover:text-gray-900">Journal</Link>
-            <span className="text-sm text-gray-600">Hi, {user?.username}</span>
-            <button onClick={handleLogout} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
-              Logout
-            </button>
-          </div>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            {greeting()}, {user?.username}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">Here&apos;s an overview of your decision journeys.</p>
         </div>
-      </nav>
+        <Link to="/wizard">
+          <Button>
+            <IconCompass className="h-4 w-4" />
+            New decision
+          </Button>
+        </Link>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Your Decisions</h1>
-            <p className="mt-1 text-gray-600">Track and manage your decision journeys</p>
-          </div>
-          <button
-            onClick={() => setShowNew(!showNew)}
-            className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700"
-          >
-            + New Decision
-          </button>
-        </div>
-
-        {showNew && (
-          <div className="mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Start a New Decision</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Select a category...</option>
-                  {categories.map(c => (
-                    <option key={c.slug} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
-                <input
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. My next laptop"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={handleCreate}
-                  disabled={!newCategory || creating}
-                  className="w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {creating ? 'Creating...' : 'Start Wizard'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading...</div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              {sessions.length === 0 ? (
-                <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-                  <div className="text-4xl mb-4">🎯</div>
-                  <h2 className="text-lg font-semibold text-gray-900">No decisions yet</h2>
-                  <p className="mt-2 text-gray-600 max-w-md mx-auto">
-                    Start your first decision journey and let ThinkStack guide you to the right choice.
-                  </p>
-                  <button
-                    onClick={() => setShowNew(true)}
-                    className="mt-6 px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700"
-                  >
-                    Start a Decision
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{session.title}</h3>
-                          <p className="mt-1 text-sm text-gray-600">{session.categoryName}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor[session.status] || 'bg-gray-100 text-gray-700'}`}>
-                          {session.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <div className="mt-4 flex gap-3">
-                        <Link
-                          to={`/decisions/${session.id}`}
-                          className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                        >
-                          View Details →
-                        </Link>
-                        {session.status !== 'COMPLETED' && (
-                          <Link
-                            to={`/decisions/${session.id}/wizard`}
-                            className="text-sm text-gray-600 hover:text-gray-900"
-                          >
-                            Continue Wizard →
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {stats.map((s) => (
+          <Card key={s.label} className="flex items-center gap-4 p-5">
+            <span className={cn('flex h-11 w-11 items-center justify-center rounded-xl', s.tone)}>
+              <s.icon className="h-5 w-5" />
+            </span>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-              {feed.length === 0 ? (
-                <p className="text-sm text-gray-500">No recent activity.</p>
-              ) : (
-                <div className="space-y-3">
-                  {feed.map((item) => (
-                    <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                      {item.description && (
-                        <p className="mt-1 text-sm text-gray-600">{item.description}</p>
-                      )}
-                      <p className="mt-1 text-xs text-gray-400">
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-2xl font-bold text-slate-900">{s.value}</div>
+              <div className="text-sm text-slate-500">{s.label}</div>
             </div>
-          </div>
-        )}
-      </main>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SectionHeading
+            title="Your decisions"
+            subtitle="Pick up where you left off."
+            action={
+              <Link to="/wizard">
+                <Button variant="outline" size="sm">
+                  New decision
+                </Button>
+              </Link>
+            }
+          />
+
+          {sessions.loading ? (
+            <PageLoader label="Loading your decisions…" />
+          ) : sessions.error ? (
+            <EmptyState title="Could not load decisions" description={sessions.error} action={<Button onClick={sessions.reload}>Retry</Button>} />
+          ) : all.length === 0 ? (
+            <EmptyState
+              icon={<IconCompass className="h-6 w-6" />}
+              title="No decisions yet"
+              description="Start your first decision journey and let ThinkStack guide you to the right choice."
+              action={
+                <Link to="/wizard">
+                  <Button>
+                    <IconCompass className="h-4 w-4" /> Start a decision
+                  </Button>
+                </Link>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {all.map((session) => (
+                <Link
+                  key={session.id}
+                  to={`/decisions/${session.id}`}
+                  className="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold text-slate-900">{session.title}</h3>
+                      <p className="mt-0.5 text-sm text-slate-500">
+                        {session.categoryName} · {session.answers.length} answers
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-400">Updated {formatDate(session.updatedAt)}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <Badge tone={statusTone(session.status)}>{titleCase(session.status)}</Badge>
+                      <IconArrowRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-indigo-500" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <SectionHeading title="Recent activity" />
+          {feed.loading ? (
+            <PageLoader />
+          ) : (feed.data ?? []).length === 0 ? (
+            <Card className="p-6 text-sm text-slate-500">No recent activity yet.</Card>
+          ) : (
+            <Card className="divide-y divide-slate-100">
+              {(feed.data ?? []).map((item) => {
+                const Icon = feedIcon[item.type] ?? IconBell
+                return (
+                  <div key={item.id} className="flex gap-3 p-4">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-800">{item.title}</p>
+                      {item.body && <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{item.body}</p>}
+                      <p className="mt-1 text-xs text-slate-400">{timeAgo(item.occurredAt)}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

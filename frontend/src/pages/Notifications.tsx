@@ -1,139 +1,162 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import api from '../api/client'
+import { useState } from 'react'
+import { get, post, del } from '../api/rest'
+import { useAsync } from '../hooks/useAsync'
+import { useToast } from '../components/Toast'
+import type { NotificationItem } from '../api/types'
+import { timeAgo } from '../lib/format'
+import { cn } from '../lib/cn'
+import { NOTIFICATIONS_CHANGED } from '../lib/events'
+import { Button, EmptyState, PageLoader, Tabs } from '../components/ui'
+import {
+  IconBell,
+  IconBook,
+  IconCompass,
+  IconSparkles,
+  IconTarget,
+  IconX,
+} from '../components/icons'
 
-interface Notification {
-  id: string
-  type: string
-  title: string
-  body: string
-  productName?: string
-  isRead: boolean
-  createdAt: string
+const typeIcon: Record<string, typeof IconBell> = {
+  PRICE_DROP: IconTarget,
+  PRICE_ALERT: IconTarget,
+  DECISION: IconCompass,
+  DECISION_REMINDER: IconCompass,
+  RECOMMENDATION: IconSparkles,
+  JOURNAL: IconBook,
+  SYSTEM: IconBell,
 }
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const toast = useToast()
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
 
-  const load = () => {
-    const url = filter === 'unread' ? '/notifications?unreadOnly=true' : '/notifications'
-    api.get(url)
-      .then(res => setNotifications(res.data.data || []))
-      .catch(() => {})
-    api.get('/notifications/unread-count')
-      .then(res => setUnreadCount(res.data.data?.count || 0))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }
+  const list = useAsync(async () => {
+    const items = await get<NotificationItem[]>('/notifications', {
+      params: filter === 'unread' ? { unreadOnly: true } : undefined,
+    })
+    return items ?? []
+  }, [filter])
 
-  useEffect(() => { load() }, [filter])
-
-  const markRead = async (id: string) => {
-    await api.post(`/notifications/${id}/read`).then(load).catch(() => {})
-  }
+  const items = list.data ?? []
+  const unreadCount = items.filter((n) => !n.isRead).length
 
   const markAllRead = async () => {
-    await api.post('/notifications/read-all').then(load).catch(() => {})
-  }
-
-  const remove = async (id: string) => {
-    await api.delete(`/notifications/${id}`).then(load).catch(() => {})
-  }
-
-  const typeIcons: Record<string, string> = {
-    PRICE_DROP: '💰',
-    PRICE_ALERT: '🔔',
-    DECISION_REMINDER: '📝',
-    RECOMMENDATION: '🎯',
-    SYSTEM: '⚙️',
-    PRODUCT_UPDATE: '📦',
+    try {
+      await post('/notifications/read-all')
+      list.reload()
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED))
+      toast.success('All notifications marked as read')
+    } catch {
+      toast.error('Could not update notifications')
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <Link to="/dashboard" className="text-xl font-bold text-indigo-600">ThinkStack</Link>
-          <Link to="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">← Dashboard</Link>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Notifications</h1>
+          <p className="mt-1 text-slate-500">
+            {unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up.'}
+          </p>
         </div>
-      </nav>
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-            {unreadCount > 0 && (
-              <p className="text-sm text-indigo-600 mt-1">{unreadCount} unread</p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 py-1 text-sm ${filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600'}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilter('unread')}
-                className={`px-3 py-1 text-sm ${filter === 'unread' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600'}`}
-              >
-                Unread
-              </button>
-            </div>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllRead}
-                className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800"
-              >
-                Mark all read
-              </button>
-            )}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading...</div>
-        ) : notifications.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-            <div className="text-4xl mb-4">🔔</div>
-            <p className="text-gray-600">No notifications.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`bg-white p-4 rounded-xl border flex items-start gap-3 ${
-                  n.isRead ? 'border-gray-100' : 'border-indigo-200 bg-indigo-50/30'
-                }`}
-              >
-                <span className="text-xl mt-0.5">{typeIcons[n.type] || '📌'}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${n.isRead ? 'text-gray-700' : 'font-semibold text-gray-900'}`}>
-                    {n.title}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-0.5">{n.body}</p>
-                  <p className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                </div>
-                <div className="flex gap-2">
-                  {!n.isRead && (
-                    <button onClick={() => markRead(n.id)} className="text-xs text-indigo-600 hover:text-indigo-800">
-                      Mark read
-                    </button>
-                  )}
-                  <button onClick={() => remove(n.id)} className="text-xs text-gray-400 hover:text-red-600">
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+        {unreadCount > 0 && (
+          <Button variant="outline" size="sm" onClick={markAllRead}>
+            Mark all as read
+          </Button>
         )}
-      </main>
+      </div>
+
+      <Tabs
+        value={filter}
+        onChange={setFilter}
+        tabs={[
+          { value: 'all', label: 'All' },
+          { value: 'unread', label: 'Unread', count: filter === 'all' ? unreadCount : undefined },
+        ]}
+        className="max-w-xs"
+      />
+
+      {list.loading ? (
+        <PageLoader />
+      ) : list.error ? (
+        <EmptyState title="Could not load notifications" description={list.error} action={<Button onClick={list.reload}>Retry</Button>} />
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={<IconBell className="h-6 w-6" />}
+          title={filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+          description="Price drops and decision updates will appear here."
+        />
+      ) : (
+        <div className="space-y-2">
+          {items.map((n) => (
+            <NotificationRow key={n.id} notification={n} onChanged={list.reload} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NotificationRow({ notification: n, onChanged }: { notification: NotificationItem; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const Icon = typeIcon[n.type] ?? IconBell
+
+  const refresh = () => {
+    onChanged()
+    window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED))
+  }
+
+  const markRead = async () => {
+    setBusy(true)
+    try {
+      await post(`/notifications/${n.id}/read`)
+      refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    setBusy(true)
+    try {
+      await del(`/notifications/${n.id}`)
+      refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-2xl border bg-white p-4 shadow-sm transition',
+        n.isRead ? 'border-slate-200' : 'border-indigo-200 bg-indigo-50/40'
+      )}
+    >
+      <span className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', n.isRead ? 'bg-slate-100 text-slate-500' : 'bg-indigo-100 text-indigo-600')}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn('text-sm', n.isRead ? 'text-slate-700' : 'font-semibold text-slate-900')}>{n.title}</p>
+        {n.body && <p className="mt-0.5 text-sm text-slate-600">{n.body}</p>}
+        <p className="mt-1 text-xs text-slate-400">{timeAgo(n.createdAt)}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {!n.isRead && (
+          <Button variant="ghost" size="sm" onClick={markRead} disabled={busy}>
+            Mark read
+          </Button>
+        )}
+        <button
+          onClick={remove}
+          disabled={busy}
+          className="rounded-lg p-1.5 text-slate-300 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+          aria-label="Delete notification"
+        >
+          <IconX className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }

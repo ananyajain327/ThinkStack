@@ -1,5 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ToastProvider } from './components/Toast'
+import { AppShell } from './components/AppShell'
+import { PageLoader } from './components/ui'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -14,64 +17,45 @@ import Journal from './pages/Journal'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Notifications from './pages/Notifications'
-import './App.css'
+import PriceAlerts from './pages/PriceAlerts'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedLayout() {
   const { user, loading } = useAuth()
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (loading) return <div className="min-h-screen"><PageLoader label="Loading ThinkStack…" /></div>
   if (!user) return <Navigate to="/login" replace />
-  return <>{children}</>
+  return <AppShell />
 }
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
-            element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
-          />
-          <Route
-            path="/decisions/:sessionId"
-            element={<ProtectedRoute><DecisionDetail /></ProtectedRoute>}
-          />
-          <Route
-            path="/decisions/:sessionId/wizard"
-            element={<ProtectedRoute><Wizard /></ProtectedRoute>}
-          />
-          <Route
-            path="/decisions/:sessionId/recommendations"
-            element={<ProtectedRoute><Recommendations /></ProtectedRoute>}
-          />
-          <Route
-            path="/decisions/:sessionId/compare"
-            element={<ProtectedRoute><Compare /></ProtectedRoute>}
-          />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/:slug" element={<ProductDetail />} />
-          <Route
-            path="/notifications"
-            element={<ProtectedRoute><Notifications /></ProtectedRoute>}
-          />
-          <Route
-            path="/profile"
-            element={<ProtectedRoute><Profile /></ProtectedRoute>}
-          />
-          <Route
-            path="/bookmarks"
-            element={<ProtectedRoute><Bookmarks /></ProtectedRoute>}
-          />
-          <Route
-            path="/journal"
-            element={<ProtectedRoute><Journal /></ProtectedRoute>}
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            <Route element={<ProtectedLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/wizard" element={<Wizard />} />
+              <Route path="/decisions/:sessionId" element={<DecisionDetail />} />
+              <Route path="/decisions/:sessionId/wizard" element={<Wizard />} />
+              <Route path="/decisions/:sessionId/recommendations" element={<Recommendations />} />
+              <Route path="/decisions/:sessionId/compare" element={<Compare />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/products/:slug" element={<ProductDetail />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/price-alerts" element={<PriceAlerts />} />
+              <Route path="/bookmarks" element={<Bookmarks />} />
+              <Route path="/journal" element={<Journal />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

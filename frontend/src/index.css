@@ -1,1 +1,107 @@
 ﻿@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-indigo-600: oklch(0.511 0.262 276.966);
+  --color-ink: #0f172a;
+
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+
+  --animate-fade-in: fade-in 0.35s ease both;
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #111827;
+    background-color: #f9fafb;
+  }
+
+  ::selection {
+    background-color: #c7d2fe;
+    color: #1e1b4b;
+  }
+
+  :focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+    background-clip: content-box;
+  }
+}
+
+@utility skeleton {
+  background-image: linear-gradient(
+    90deg,
+    rgb(229 231 235 / 0.7) 0px,
+    rgb(243 244 246 / 0.9) 40px,
+    rgb(229 231 235 / 0.7) 80px
+  );
+  background-size: 800px 100%;
+  animation: var(--animate-shimmer);
+}
+
+@utility text-gradient {
+  background-image: linear-gradient(90deg, #4f46e5, #9333ea);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(99 102 241 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(99 102 241 / 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { apiErrorMessage } from '../api/client'
+import { Logo } from '../components/Logo'
+import { Alert, Button, Field } from '../components/ui'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -9,8 +12,10 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { register } = useAuth()
+  const { register, user } = useAuth()
   const navigate = useNavigate()
+
+  if (user) return <Navigate to="/dashboard" replace />
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -19,110 +24,93 @@ export default function Register() {
     try {
       await register(username, email, password, displayName || undefined)
       navigate('/dashboard')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } catch (err) {
+      setError(apiErrorMessage(err))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="text-3xl font-bold text-indigo-600">ThinkStack</Link>
-          <p className="mt-2 text-gray-600">Create your account</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-12">
+      <Link to="/" className="mb-8">
+        <Logo className="text-xl" />
+      </Link>
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="mb-6 text-center">
+          <h1 className="text-xl font-bold text-slate-900">Create your account</h1>
+          <p className="mt-1 text-sm text-slate-500">Start making smarter decisions today</p>
         </div>
 
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mb-4">
+            <Alert tone="error">{error}</Alert>
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                required
-                minLength={3}
-                maxLength={100}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="janedoe"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Username" required hint="At least 3 characters">
+            <input
+              type="text"
+              required
+              minLength={3}
+              maxLength={100}
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              placeholder="janedoe"
+            />
+          </Field>
 
-            <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
-                Display Name <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                maxLength={150}
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Jane Doe"
-              />
-            </div>
+          <Field label="Display name" hint="Optional">
+            <input
+              type="text"
+              maxLength={150}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              placeholder="Jane Doe"
+            />
+          </Field>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="you@example.com"
-              />
-            </div>
+          <Field label="Email" required>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              placeholder="you@example.com"
+            />
+          </Field>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={8}
-                maxLength={72}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="••••••••"
-              />
-              <p className="mt-1 text-xs text-gray-500">At least 8 characters</p>
-            </div>
+          <Field label="Password" required hint="At least 8 characters">
+            <input
+              type="password"
+              required
+              minLength={8}
+              maxLength={72}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              placeholder="••••••••"
+            />
+          </Field>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {loading ? 'Creating account...' : 'Create Account'}
-            </button>
-          </form>
+          <Button type="submit" size="lg" fullWidth loading={loading}>
+            {loading ? 'Creating account…' : 'Create account'}
+          </Button>
+        </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link to="/login" className="text-indigo-600 hover:text-indigo-800 font-medium">
-              Sign in
-            </Link>
-          </p>
-        </div>
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Already have an account?{' '}
+          <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-700">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   )

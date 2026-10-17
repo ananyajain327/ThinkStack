@@ -1,128 +1,222 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { get, put, post } from '../api/rest'
+import { apiErrorMessage } from '../api/client'
+import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../context/AuthContext'
-import api from '../api/client'
+import { useToast } from '../components/Toast'
+import type { DnaFactor, UserPreference } from '../api/types'
+import { formatDate, initials } from '../lib/format'
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Field,
+  PageLoader,
+  ScoreBar,
+} from '../components/ui'
+import { IconCompass, IconRefresh } from '../components/icons'
+
+const EXPERIENCE = [
+  { value: '', label: 'Not set' },
+  { value: 'BEGINNER', label: 'Beginner' },
+  { value: 'INTERMEDIATE', label: 'Intermediate' },
+  { value: 'ADVANCED', label: 'Advanced' },
+]
+
+const CURRENCIES = [
+  { value: 'INR', label: 'INR — Indian Rupee' },
+  { value: 'USD', label: 'USD — US Dollar' },
+  { value: 'EUR', label: 'EUR — Euro' },
+]
 
 export default function Profile() {
   const { user, logout } = useAuth()
-  const [prefs, setPrefs] = useState<any>(null)
-  const [dna, setDna] = useState<any[]>([])
+  const toast = useToast()
+
+  const prefs = useAsync(() => get<UserPreference>('/me/preferences'), [])
+  const dna = useAsync(() => get<DnaFactor[]>('/dna'), [])
+
+  const [experienceLevel, setExperienceLevel] = useState('')
+  const [defaultCurrency, setDefaultCurrency] = useState('INR')
+  const [brandPreferences, setBrandPreferences] = useState('')
+  const [osPreferences, setOsPreferences] = useState('')
+  const [notifyPriceDrops, setNotifyPriceDrops] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    api.get('/me/preferences').then(res => setPrefs(res.data.data)).catch(() => {})
-    api.get('/dna').then(res => setDna(res.data.data || [])).catch(() => {})
-  }, [])
+    const p = prefs.data
+    if (!p) return
+    setExperienceLevel(p.experienceLevel ?? '')
+    setDefaultCurrency(p.defaultCurrency ?? 'INR')
+    setBrandPreferences(p.brandPreferences ?? '')
+    setOsPreferences(p.osPreferences ?? '')
+    setNotifyPriceDrops(p.notifyPriceDrops ?? true)
+  }, [prefs.data])
 
-  const handleSavePrefs = async () => {
-    if (!prefs) return
+  const savePrefs = async () => {
     setSaving(true)
     try {
-      await api.put('/me/preferences', prefs)
-      alert('Preferences saved!')
-    } catch {
-      alert('Failed to save preferences')
+      await put('/me/preferences', {
+        experienceLevel: experienceLevel || undefined,
+        defaultCurrency,
+        brandPreferences: brandPreferences.trim() || undefined,
+        osPreferences: osPreferences.trim() || undefined,
+        notifyPriceDrops,
+      })
+      toast.success('Preferences saved')
+      prefs.reload()
+    } catch (err) {
+      toast.error(apiErrorMessage(err))
     } finally {
       setSaving(false)
     }
   }
 
+  const refreshDna = async () => {
+    setRefreshing(true)
+    try {
+      await post('/dna/refresh')
+      dna.reload()
+      toast.success('Decision DNA refreshed')
+    } catch {
+      toast.error('Could not refresh DNA')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <Link to="/dashboard" className="text-xl font-bold text-indigo-600">ThinkStack</Link>
-          <div className="flex gap-3">
-            <Link to="/bookmarks" className="text-sm text-gray-600 hover:text-gray-900">Bookmarks</Link>
-            <Link to="/journal" className="text-sm text-gray-600 hover:text-gray-900">Journal</Link>
-            <button onClick={logout} className="text-sm text-gray-600 hover:text-gray-900">Logout</button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Profile &amp; preferences</h1>
+        <p className="mt-1 text-slate-500">Tune how ThinkStack recommends products to you.</p>
+      </div>
+
+      <Card className="p-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-xl font-bold text-white">
+            {initials(user?.username ?? '?')}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-semibold text-slate-900">{user?.username}</p>
+            <p className="text-sm text-slate-500">{user?.email}</p>
+            <div className="mt-1">
+              <Badge tone="indigo">{user?.role}</Badge>
+            </div>
           </div>
+          <Button variant="outline" onClick={logout}>
+            Sign out
+          </Button>
         </div>
-      </nav>
+      </Card>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Profile</h1>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-6">
+          <CardHeader title="Preferences" subtitle="Tune how recommendations are generated" />
 
-        <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Account</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Username</span>
-              <span className="font-medium text-gray-900">{user?.username}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Email</span>
-              <span className="font-medium text-gray-900">{user?.email}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Role</span>
-              <span className="font-medium text-gray-900">{user?.role}</span>
-            </div>
-          </div>
-        </div>
-
-        {prefs && (
-          <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Preferences</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Experience Level</label>
+          {prefs.loading ? (
+            <PageLoader />
+          ) : (
+            <div className="mt-4 space-y-4">
+              <Field label="Experience level">
                 <select
-                  value={prefs.experienceLevel || ''}
-                  onChange={(e) => setPrefs({ ...prefs, experienceLevel: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  value={experienceLevel}
+                  onChange={(e) => setExperienceLevel(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                 >
-                  <option value="BEGINNER">Beginner</option>
-                  <option value="INTERMEDIATE">Intermediate</option>
-                  <option value="EXPERT">Expert</option>
+                  {EXPERIENCE.map((e) => (
+                    <option key={e.value} value={e.value}>
+                      {e.label}
+                    </option>
+                  ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              </Field>
+
+              <Field label="Default currency">
                 <select
-                  value={prefs.preferredCurrency || ''}
-                  onChange={(e) => setPrefs({ ...prefs, preferredCurrency: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  value={defaultCurrency}
+                  onChange={(e) => setDefaultCurrency(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                 >
-                  <option value="INR">INR (₹)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
+                  {CURRENCIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
+              </Field>
+
+              <Field label="Preferred brands" hint="Comma separated">
+                <input
+                  value={brandPreferences}
+                  onChange={(e) => setBrandPreferences(e.target.value)}
+                  placeholder="Apple, Sony, Samsung"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </Field>
+
+              <Field label="Preferred platforms" hint="Comma separated">
+                <input
+                  value={osPreferences}
+                  onChange={(e) => setOsPreferences(e.target.value)}
+                  placeholder="Windows, Android"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </Field>
+
+              <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={notifyPriceDrops}
+                  onChange={(e) => setNotifyPriceDrops(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-slate-700">Notify me about price drops</span>
+              </label>
+
+              <div className="flex justify-end">
+                <Button onClick={savePrefs} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save preferences'}
+                </Button>
               </div>
             </div>
-            <button
-              onClick={handleSavePrefs}
-              disabled={saving}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Preferences'}
-            </button>
-          </div>
-        )}
+          )}
+        </Card>
 
-        {dna.length > 0 && (
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Decision DNA</h2>
-            <p className="text-sm text-gray-600 mb-4">Patterns learned from your past decisions.</p>
-            <div className="space-y-3">
-              {dna.map((factor) => (
-                <div key={factor.factor}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600 capitalize">{factor.factor.replace(/_/g, ' ')}</span>
-                    <span className="font-medium">{(factor.weight * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-indigo-600 h-2 rounded-full"
-                      style={{ width: `${Math.min(100, factor.weight * 100)}%` }}
-                    />
-                  </div>
+        <Card className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <CardHeader title="Decision DNA" subtitle="What drives your decisions" />
+            <Button variant="outline" size="sm" onClick={refreshDna} disabled={refreshing}>
+              <IconRefresh className="h-4 w-4" /> {refreshing ? 'Refreshing…' : 'Refresh'}
+            </Button>
+          </div>
+
+          {dna.loading ? (
+            <PageLoader />
+          ) : (dna.data ?? []).length === 0 ? (
+            <EmptyState
+              icon={<IconCompass className="h-6 w-6" />}
+              title="Your DNA is still forming"
+              description="Complete a few decisions and journal entries to build your decision profile."
+            />
+          ) : (
+            <div className="mt-4 space-y-4">
+              {(dna.data ?? []).map((f) => (
+                <div key={f.id}>
+                  <ScoreBar label={f.factor} value={f.score ?? 0} />
+                  <p className="mt-1 text-xs text-slate-400">
+                    {f.sampleSize != null ? `${f.sampleSize} signals` : ''}
+                    {f.updatedAt ? ` · updated ${formatDate(f.updatedAt)}` : ''}
+                  </p>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </Card>
+      </div>
     </div>
   )
 }
