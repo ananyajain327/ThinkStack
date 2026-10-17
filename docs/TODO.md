@@ -21,17 +21,19 @@ Also see [ROADMAP](ROADMAP.md), [CHANGELOG](CHANGELOG.md), [FEATURE_BACKLOG](FEA
 
 ## Phase 2 — Frontend (complete)
 - [x] Vite + React + TypeScript + Tailwind v4 scaffold
-- [x] Typed axios API client with JWT refresh interceptor (`src/api/client.ts`, `src/api/types.ts`)
+- [x] Typed axios API client with JWT refresh interceptor (`src/api/client.ts`, `src/api/types.ts`); shared `rest` helpers + `useAsync` hook
+- [x] Design system — Tailwind v4 `@theme` tokens, shared UI kit (`components/ui.tsx`), icon set, toast system, logo, responsive `AppShell`
 - [x] Auth context + screens (login / register) with correct DTO shapes
 - [x] Landing page
 - [x] Dashboard (new-decision flow, categories, personalized feed)
-- [x] Wizard UI (dynamic, adaptive)
+- [x] Wizard UI (dynamic, adaptive, resume/prefill, RANGE sliders, review step)
 - [x] Results + explainability UI (recommendations, per-dimension reasoning)
-- [x] Side-by-side comparison page
+- [x] Side-by-side comparison page (specs + prices, include-alternatives toggle)
 - [x] Decision detail page
 - [x] Product catalog browse + detail (specs / prices / price-history chart / reviews)
 - [x] Notifications center (filter, mark read/all, delete)
-- [x] Profile (preferences + Decision DNA), Bookmarks, Decision Journal
+- [x] Price alerts page (list/target-vs-current/reached badge/delete)
+- [x] Profile (preferences + Decision DNA), Bookmarks, Decision Journal (full CRUD)
 
 ## Phase 3 — Polish & Ops
 - [x] Price charts (Recharts) on product detail
